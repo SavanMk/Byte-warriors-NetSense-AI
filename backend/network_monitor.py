@@ -1,77 +1,45 @@
-import subprocess
-import platform
-import speedtest
 import json
-import os
-from datetime import datetime
+import time
+import urllib.error
+import speedtest
 
-# Define where to save the JSON file (saving it in the frontend folder for easy access)
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-JSON_FILE_PATH = os.path.join(FRONTEND_DIR, 'metrics.json')
+def run_monitor(output_file='data.json'):
+    print("📡 Running real speed test...")
+    st = None
 
-def run_ping(host="8.8.8.8"):
-    """Runs a basic ping test to a reliable public DNS server."""
-    print(f"[*] Pinging {host}...")
-    param = '-n' if platform.system().lower() == 'windows' else '-c'
-    command = ['ping', param, '4', host]
+    for secure_mode in (False, True):
+        try:
+            st = speedtest.Speedtest(secure=secure_mode)
+            st.get_best_server()
+            if secure_mode:
+                print("🔐 Using secure HTTPS mode for speedtest")
+            break
+        except urllib.error.HTTPError as err:
+            if err.code == 403 and not secure_mode:
+                print("⚠️ 403 Forbidden detected, retrying with secure=True")
+                continue
+            raise
+        except Exception as err:
+            if secure_mode:
+                raise
+            print(f"⚠️ Initial speedtest attempt failed: {err}. Retrying with secure=True")
+            continue
 
-    try:
-        output = subprocess.check_output(command, universal_newlines=True)
-        print("--- Ping Results ---\n", output.strip())
-        return True
-    except subprocess.CalledProcessError as e:
-        print("[-] Ping failed:\n", e.output)
-        return False
+    if st is None:
+        raise RuntimeError("Unable to initialize Speedtest client")
 
-def run_speed_test():
-    """Runs a speed test and returns a dictionary of the results."""
-    print("[*] Finding best server and running speed test... (This may take a minute)")
-    try:
-        st = speedtest.Speedtest()
-        st.get_best_server()
+    download = st.download() / 1_000_000  # Mbps
+    upload = st.upload() / 1_000_000      # Mbps
+    ping = st.results.ping
 
-        # Convert bps to Mbps and round to 2 decimal places
-        download_speed = round(st.download() / 1_000_000, 2)
-        upload_speed = round(st.upload() / 1_000_000, 2)
-        ping_latency = round(st.results.ping, 2)
+    data = {
+        "ping": round(ping, 2),
+        "download": round(download, 2),
+        "upload": round(upload, 2),
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
 
-        print(f"[*] Speed Test Complete: {download_speed} Down / {upload_speed} Up / {ping_latency}ms Ping")
-        
-        # Structure the data for our frontend
-        return {
-            "status": "success",
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "download": download_speed,
-            "upload": upload_speed,
-            "ping": ping_latency
-        }
-    except Exception as e:
-        print(f"[-] Speed test failed: {e}")
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+    with open(output_file, 'w') as f:
+        json.dump(data, f)
 
-def save_to_json(data):
-    """Saves the metrics dictionary to a JSON file."""
-    # Ensure the frontend directory exists
-    os.makedirs(FRONTEND_DIR, exist_ok=True)
-    
-    with open(JSON_FILE_PATH, 'w') as f:
-        json.dump(data, f, indent=4)
-    print(f"[*] Real-time metrics saved to {JSON_FILE_PATH}")
-
-if __name__ == "__main__":
-    print("="*40)
-    print(" NetSense AI: Generating Real Data")
-    print("="*40)
-    
-    # Run the tests
-    run_ping()
-    metrics_data = run_speed_test()
-    
-    # Save the data to JSON if successful
-    if metrics_data["status"] == "success":
-        save_to_json(metrics_data)
-        
-    print("========================================")
+    print("✅ Real metrics saved")
