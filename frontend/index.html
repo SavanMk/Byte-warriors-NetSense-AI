@@ -4,241 +4,1305 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NetSense AI</title>
-
 <style>
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-   background: #0b1220;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
+:root {
+    --bg-1: #07111f;
+    --bg-2: #0d1b31;
+    --panel: rgba(10, 22, 40, 0.58);
+    --panel-strong: rgba(11, 28, 49, 0.82);
+    --line: rgba(160, 226, 255, 0.16);
+    --line-strong: rgba(160, 226, 255, 0.32);
+    --text: #eff8ff;
+    --muted: #9eb6cb;
+    --aqua: #7ef2ff;
+    --blue: #68a6ff;
+    --mint: #7bffc7;
+    --rose: #ff8c9f;
+    --gold: #ffd27a;
+    --shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+    --radius-xl: 32px;
+    --radius-lg: 24px;
+    --radius-md: 18px;
 }
 
-.dashboard {
-    height: auto;
-    background: rgba(30, 41, 59, 0.6);
-    backdrop-filter: blur(12px);
-    padding: 35px;
-    border-radius: 20px;
-    border: 0.5px solid rgba(80, 198, 139, 0.4);
-    box-shadow: 0 0 25px rgba(80, 198, 139, 0.15);    width: 420px;
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    font-family: "Segoe UI Variable", "Trebuchet MS", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at 14% 28%, rgba(104, 166, 255, 0.34), transparent 31%),
+        radial-gradient(circle at 88% 24%, rgba(255, 210, 122, 0.3), transparent 33%),
+        radial-gradient(circle at 78% 68%, rgba(255, 210, 122, 0.12), transparent 24%),
+        radial-gradient(circle at 22% 80%, rgba(126, 242, 255, 0.1), transparent 22%),
+        linear-gradient(145deg, #040b14 0%, #081525 42%, #02060c 100%);
+    overflow-x: hidden;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+}
+
+body::before {
+    background-image:
+        linear-gradient(rgba(126, 242, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(126, 242, 255, 0.05) 1px, transparent 1px);
+    background-size: 78px 78px;
+    mask-image: radial-gradient(circle at center, black 30%, transparent 88%);
+    opacity: 0.45;
+}
+
+body::after {
+    background:
+        radial-gradient(circle at center, rgba(255, 255, 255, 0.08), transparent 45%);
+    mix-blend-mode: screen;
+    opacity: 0.65;
+}
+
+.ambient-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(20px);
+    opacity: 0.45;
+    pointer-events: none;
+    animation: drift 16s ease-in-out infinite;
+}
+
+.ambient-orb.one {
+    width: 260px;
+    height: 260px;
+    top: 9%;
+    left: -3%;
+    background: rgba(104, 166, 255, 0.2);
+}
+
+.ambient-orb.two {
+    width: 320px;
+    height: 320px;
+    right: -6%;
+    top: 56%;
+    background: rgba(255, 210, 122, 0.2);
+    animation-delay: -5s;
+}
+
+.ambient-orb.three {
+    width: 180px;
+    height: 180px;
+    left: 54%;
+    bottom: 8%;
+    background: rgba(255, 140, 159, 0.12);
+    animation-delay: -9s;
+}
+
+.intro-overlay {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(circle at center, rgba(11, 28, 49, 0.66), rgba(1, 5, 12, 0.96)),
+        linear-gradient(180deg, rgba(6, 14, 24, 0.9), rgba(1, 5, 12, 0.98));
+    backdrop-filter: blur(22px);
+    z-index: 20;
+    transition: opacity 0.9s ease, visibility 0.9s ease;
+}
+
+.intro-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.intro-scene {
+    position: relative;
+    width: min(92vw, 720px);
+    min-height: 360px;
+    border-radius: 42px;
+    border: 1px solid rgba(160, 226, 255, 0.14);
+    background: linear-gradient(180deg, rgba(8, 20, 36, 0.86), rgba(5, 12, 22, 0.72));
+    box-shadow: var(--shadow);
+    transform-style: preserve-3d;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+}
+
+.intro-scene::before,
+.intro-scene::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.intro-scene::before {
+    width: 280px;
+    height: 280px;
+    left: -30px;
+    top: 40px;
+    background: radial-gradient(circle, rgba(104, 166, 255, 0.22), transparent 72%);
+}
+
+.intro-scene::after {
+    width: 260px;
+    height: 260px;
+    right: -20px;
+    bottom: 10px;
+    background: radial-gradient(circle, rgba(255, 210, 122, 0.18), transparent 72%);
+}
+
+.intro-core {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    gap: 18px;
     text-align: center;
 }
 
-.subtitle {
-    color: #facc15;
-    font-size: 22px;
-    margin-bottom: 25px;
-    text-shadow: 0 0 10px rgba(250,204,21,0.6);
+.intro-rings {
+    position: absolute;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    border: 1px solid rgba(126, 242, 255, 0.12);
+    box-shadow:
+        0 0 0 18px rgba(126, 242, 255, 0.035),
+        0 0 0 44px rgba(255, 210, 122, 0.02);
+    animation: rings 2.5s ease-in-out infinite;
 }
 
-.metric {
-    background: linear-gradient(
-        to right,
-        rgba(15, 23, 42, 0.7),
-        rgba(15, 23, 42, 0.5)
-    );
-    margin: 15px 0;
-    padding: 16px;
-    border-radius: 10px;
-    border-left: 3px solid #3b82f6;
+.intro-rings::before,
+.intro-rings::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+}
 
-    transition: all 0.3s ease;
+.intro-rings::before {
+    transform: translateY(-146px);
+    background: var(--aqua);
+    box-shadow: 0 0 18px rgba(126, 242, 255, 0.7);
+}
+
+.intro-rings::after {
+    transform: translateY(132px);
+    background: var(--gold);
+    box-shadow: 0 0 18px rgba(255, 210, 122, 0.62);
+}
+
+.intro-logo-shell {
     position: relative;
-    overflow: hidden;
+    width: 220px;
+    height: 220px;
+    display: grid;
+    place-items: center;
+    border-radius: 40px;
+    background: linear-gradient(145deg, rgba(126, 242, 255, 0.08), rgba(104, 166, 255, 0.06));
+    border: 1px solid rgba(160, 226, 255, 0.14);
+    box-shadow: 0 28px 70px rgba(2, 12, 26, 0.4);
 }
 
-.metric:hover {
-    transform: translateY(-3px);
+.intro-logo-shell::before {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
 
-    /* glow effect */
+.intro-logo-main {
+    width: 160px;
+    border-radius: 28px;
     box-shadow:
-        0 0 10px rgba(59, 130, 246, 0.6),
-        0 0 20px rgba(59, 130, 246, 0.4),
-        0 0 30px rgba(59, 130, 246, 0.2);
+        0 22px 55px rgba(0, 0, 0, 0.35),
+        0 0 28px rgba(126, 242, 255, 0.16);
+    animation: introLogoLift 2.5s ease-in-out infinite;
 }
 
-.metric:hover {
-    transform: scale(1.03);
-
-.metric:hover {
-    transform: translateY(-4px);
-
-    box-shadow:
-        0 0 12px rgba(59, 130, 246, 0.6),
-        0 0 25px rgba(59, 130, 246, 0.4);
-
-    border-left: 3px solid #60a5fa;
-}
-
-.metric:hover::before {
-    opacity: 1;
-}    
-}
-
-.metric h3 {
-    font-size: 12px;
-    color: #94a3b8;
+.intro-wordmark {
+    font-size: clamp(2rem, 6vw, 3.6rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 800;
     margin: 0;
+    background: linear-gradient(90deg, #dffcff 0%, #9eefff 35%, #ffe4a6 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
-.metric p {
-    font-size: 26px;
-    margin: 6px 0 0;
-    text-shadow: 0 0 6px rgba(255,255,255,0.2);
-    font: weight 600px;
-    color: #f1f5f9;
+.intro-tagline {
+    margin: 0;
+    color: rgba(239, 248, 255, 0.64);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
 }
 
-.status {
-    margin-top: 18px;
-    font-size: 14px;
-    color: #4ade80;
+.shell {
+    position: relative;
+    width: min(1120px, calc(100vw - 28px));
+    margin: 0 auto;
+    padding: 28px 0 40px;
+    opacity: 1;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.shell.hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
 }
 
 .dashboard {
-    animation: fadeIn 0.6s ease;
+    position: relative;
+    padding: 26px;
+    border-radius: 36px;
+    background: linear-gradient(180deg, rgba(8, 20, 36, 0.74), rgba(8, 18, 32, 0.6));
+    border: 1px solid rgba(160, 226, 255, 0.16);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(24px);
+    overflow: hidden;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.dashboard::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(130deg, rgba(126, 242, 255, 0.06), transparent 30%, transparent 70%, rgba(104, 166, 255, 0.08));
+    pointer-events: none;
+}
+
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 26px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.brand-badge {
+    position: relative;
+    flex: 0 0 auto;
+    width: 114px;
+    height: 114px;
+    border-radius: 32px;
+    background: linear-gradient(145deg, rgba(126, 242, 255, 0.16), rgba(104, 166, 255, 0.1));
+    border: 1px solid rgba(160, 226, 255, 0.18);
+    display: grid;
+    place-items: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 28px 55px rgba(2, 12, 26, 0.42);
+    margin-top: -14px;
+}
+
+.brand-badge::after {
+    content: "";
+    position: absolute;
+    inset: 11px;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.brand-logo {
+    width: 82px;
+    border-radius: 22px;
+}
+
+.eyebrow {
+    margin: 0 0 4px;
+    color: var(--aqua);
+    font-size: 0.76rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: clamp(1.85rem, 4vw, 3.1rem);
+    line-height: 0.95;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.brand p {
+    margin: 8px 0 0;
+    max-width: 560px;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.live-pill {
+    flex: 0 0 auto;
+    padding: 11px 15px;
+    border-radius: 999px;
+    background: rgba(10, 22, 40, 0.76);
+    border: 1px solid rgba(160, 226, 255, 0.16);
+    color: rgba(239, 248, 255, 0.82);
+    font-size: 0.84rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.live-pill.syncing::before,
+.live-pill.idle::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 10px;
+    border-radius: 50%;
+    vertical-align: middle;
+}
+
+.live-pill.syncing::before {
+    background: var(--mint);
+    box-shadow: 0 0 14px rgba(123, 255, 199, 0.66);
+}
+
+.live-pill.idle::before {
+    background: var(--gold);
+    box-shadow: 0 0 14px rgba(255, 210, 122, 0.5);
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.metric-card {
+    position: relative;
+    min-height: 214px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(13, 28, 48, 0.82), rgba(9, 22, 38, 0.62));
+    border: 1px solid rgba(160, 226, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 16px 36px rgba(0, 0, 0, 0.24);
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+
+.metric-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), transparent 28%, transparent 70%, rgba(255, 255, 255, 0.04));
+    pointer-events: none;
+}
+
+.metric-card::after {
+    content: "";
+    position: absolute;
+    inset: auto -20% -55% auto;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    filter: blur(8px);
+    opacity: 0.24;
+}
+
+.metric-card[data-kind="download"]::after {
+    background: radial-gradient(circle, rgba(126, 242, 255, 0.9), transparent 70%);
+}
+
+.metric-card[data-kind="upload"]::after {
+    background: radial-gradient(circle, rgba(104, 166, 255, 0.9), transparent 70%);
+}
+
+.metric-card[data-kind="ping"]::after {
+    background: radial-gradient(circle, rgba(255, 210, 122, 0.85), transparent 70%);
+}
+
+.metric-card:hover {
+    transform: translateY(-7px) rotateX(3deg) rotateY(-2deg);
+    border-color: var(--line-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 52px rgba(0, 0, 0, 0.28);
+}
+
+.dashboard.testing .metric-card {
+    animation: testGlow 1.8s ease-in-out infinite;
+}
+
+.dashboard.testing .metric-card[data-kind="download"] {
+    border-color: rgba(126, 242, 255, 0.28);
+}
+
+.dashboard.testing .metric-card[data-kind="upload"] {
+    border-color: rgba(104, 166, 255, 0.28);
+    animation-delay: 0.25s;
+}
+
+.dashboard.testing .metric-card[data-kind="ping"] {
+    border-color: rgba(255, 210, 122, 0.34);
+    animation-delay: 0.5s;
+}
+
+.metric-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.metric-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(239, 248, 255, 0.9);
+    font-size: 0.88rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.metric-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--aqua);
+    opacity: 0.92;
+}
+
+.metric-chip {
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(239, 248, 255, 0.74);
+}
+
+.metric-value {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    margin: 0;
+    font-size: clamp(2.5rem, 4vw, 3.45rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    min-height: 74px;
+    text-shadow: 0 10px 34px rgba(0, 0, 0, 0.18);
+    opacity: 1;
+}
+
+.metric-value small {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(239, 248, 255, 0.56);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.metric-meta {
+    margin-top: 12px;
+    color: rgba(239, 248, 255, 0.64);
+    line-height: 1.45;
+    font-size: 0.93rem;
+}
+
+.dashboard.loading .metric-card {
+    border-color: rgba(160, 226, 255, 0.2);
+}
+
+.dashboard.loading .metric-value {
+    color: rgba(239, 248, 255, 0.45);
+}
+
+.dashboard.loading .metric-value::after {
+    content: "";
+    display: block;
+    width: 38%;
+    height: 14px;
+    margin-left: auto;
+    margin-bottom: 17px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.06));
+    background-size: 200% 100%;
+    animation: pulseLine 1.2s linear infinite;
+}
+
+.action-panel {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 22px;
+    padding: 18px 20px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(10, 22, 40, 0.84), rgba(8, 18, 32, 0.62));
+    border: 1px solid rgba(160, 226, 255, 0.12);
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.action-button {
+    position: relative;
+    min-width: 250px;
+    padding: 16px 22px;
+    border: 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #76f2ff 0%, #68a6ff 52%, #8ef3d5 100%);
+    color: #03111f;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 18px 40px rgba(104, 166, 255, 0.25);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+    overflow: hidden;
+}
+
+.action-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 44px rgba(104, 166, 255, 0.32);
+}
+
+.action-button:disabled {
+    cursor: wait;
+    opacity: 0.92;
+}
+
+.action-button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.45), transparent 62%);
+    transform: translateX(-130%);
+}
+
+.action-button.loading::before {
+    animation: buttonSweep 1.1s linear infinite;
+}
+
+.dashboard.testing .action-button {
+    background: linear-gradient(135deg, #8defff 0%, #ffd46a 46%, #68a6ff 100%);
+    box-shadow: 0 18px 42px rgba(255, 210, 122, 0.24);
+}
+
+.dashboard.testing .status::after {
+    content: "";
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 10px;
+    border-radius: 50%;
+    background: linear-gradient(145deg, var(--aqua), var(--gold));
+    box-shadow: 0 0 16px rgba(126, 242, 255, 0.55);
+    animation: statusPulse 1s ease-in-out infinite;
+    vertical-align: middle;
+}
+
+.button-label {
+    position: relative;
+    z-index: 1;
+}
+
+.status-stack {
+    min-width: 260px;
+    text-align: right;
+}
+
+.status {
+    margin: 0;
+    color: rgba(239, 248, 255, 0.88);
+    font-size: 0.96rem;
 }
 
 .time {
-    font-size: 12px;
-    color: #94a3b8;
-    margin-top: 5px;
+    margin-top: 8px;
+    color: rgba(239, 248, 255, 0.58);
+    font-size: 0.84rem;
+    letter-spacing: 0.05em;
 }
 
-.logo {
-    width: 130px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-    filter: drop-shadow(0 0 6px rgba(80, 198, 139, 0.4));
-    animation: float 3s ease-in-out infinite;
+@keyframes drift {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(18px, -18px, 0) scale(1.08); }
 }
 
-@keyframes float {
-    0% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-    100% { transform: translateY(0); }
+@keyframes logoFloat {
+    0%, 100% { transform: translateY(0) rotateX(0deg); }
+    50% { transform: translateY(-10px) rotateX(6deg); }
+}
+
+@keyframes rings {
+    0%, 100% { transform: scale(0.96); opacity: 0.66; }
+    50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes introLogoLift {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.03); }
+}
+
+@keyframes shimmer {
+    from { background-position: 0% 50%; }
+    to { background-position: 200% 50%; }
+}
+
+@keyframes introLoad {
+    from { width: 0; }
+    to { width: 100%; }
+}
+
+@keyframes pulseLine {
+    from { background-position: 0% 0; }
+    to { background-position: 200% 0; }
+}
+
+@keyframes buttonSweep {
+    from { transform: translateX(-130%); }
+    to { transform: translateX(130%); }
+}
+
+@keyframes testGlow {
+    0%, 100% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 16px 36px rgba(0, 0, 0, 0.24),
+            0 0 0 rgba(126, 242, 255, 0);
+    }
+    50% {
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            0 22px 48px rgba(0, 0, 0, 0.28),
+            0 0 38px rgba(126, 242, 255, 0.16),
+            0 0 64px rgba(255, 210, 122, 0.12);
+    }
+}
+
+@keyframes statusPulse {
+    0%, 100% { transform: scale(0.9); opacity: 0.68; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+
+@media (max-width: 920px) {
+    .hero,
+    .action-panel {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .live-pill,
+    .status-stack {
+        align-self: flex-start;
+        text-align: left;
+    }
+
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .actions {
+        justify-content: flex-start;
+    }
+
+    .action-button {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .shell {
+        width: calc(100vw - 18px);
+        padding: 12px 0 24px;
+    }
+
+    .dashboard {
+        padding: 18px;
+        border-radius: 28px;
+    }
+
+    .brand {
+        align-items: flex-start;
+    }
+
+    .brand-badge {
+        width: 88px;
+        height: 88px;
+        border-radius: 26px;
+        margin-top: 0;
+    }
+
+    .brand-logo {
+        width: 64px;
+    }
+
+    .metric-card {
+        min-height: auto;
+    }
+
+    .metric-value {
+        font-size: 2.45rem;
+        min-height: 62px;
+    }
+
+    .action-panel {
+        padding: 18px;
+    }
+
+    .intro-scene {
+        min-height: 290px;
+        border-radius: 28px;
+    }
+
+    .intro-rings {
+        width: 250px;
+        height: 250px;
+    }
+
+    .intro-logo-shell {
+        width: 180px;
+        height: 180px;
+        border-radius: 32px;
+    }
+
+    .intro-logo-main {
+        width: 130px;
+    }
 }
 </style>
 </head>
-
 <body>
+<div class="ambient-orb one"></div>
+<div class="ambient-orb two"></div>
+<div class="ambient-orb three"></div>
 
-<div class="dashboard">
-
-   <img src="logo.png" class="logo">
-
-    <div class="subtitle"><b>Automated WiFi Analyzer</b></div>
-
-    <div class="metric">
-        <h3>Download Speed</h3>
-        <p id="download">0 Mbps</p>
+<div class="intro-overlay" id="introOverlay">
+    <div class="intro-scene">
+        <div class="intro-core">
+            <div class="intro-rings"></div>
+            <div class="intro-logo-shell">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="NetSense AI logo" class="intro-logo-main">
+            </div>
+            <h2 class="intro-wordmark">NetSense AI</h2>
+            <p class="intro-tagline">Live Network Intelligence</p>
+        </div>
     </div>
-
-    <div class="metric">
-        <h3>Upload Speed</h3>
-        <p id="upload">0 Mbps</p>
-    </div>
-
-    <div class="metric">
-        <h3>Latency</h3>
-        <p id="ping">0 ms</p>
-    </div>
-
-    <div class="status">🟢 Static Mode (Frontend Only)</div>
-    <div class="time" id="time"></div>
-
 </div>
 
+<main class="shell hidden" id="appShell">
+    <section class="dashboard" id="dashboard">
+        <header class="hero">
+            <div class="brand">
+                <div class="brand-badge">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="NetSense AI logo" class="brand-logo">
+                </div>
+                <div>
+                    <p class="eyebrow">Smart WiFi Analyzer</p>
+                    <h1>NetSense AI</h1>
+                    <p>Precision network visibility with a live glass dashboard.</p>
+                </div>
+            </div>
+            <div class="live-pill idle" id="livePill">Waiting for sync</div>
+        </header>
+
+        <section class="metrics-grid">
+            <article class="metric-card" data-kind="download">
+                <div class="metric-top">
+                    <div class="metric-label">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 4v11m0 0l4-4m-4 4l-4-4M5 19h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Download</span>
+                    </div>
+                    <div class="metric-chip">Mbps</div>
+                </div>
+                <p class="metric-value" id="downloadValue">0.00 <small>Mbps</small></p>
+                <div class="metric-meta" id="downloadMeta">Prepared to load your most recent saved result.</div>
+            </article>
+
+            <article class="metric-card" data-kind="upload">
+                <div class="metric-top">
+                    <div class="metric-label">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M12 20V9m0 0l4 4m-4-4l-4 4M5 5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Upload</span>
+                    </div>
+                    <div class="metric-chip">Mbps</div>
+                </div>
+                <p class="metric-value" id="uploadValue">0.00 <small>Mbps</small></p>
+                <div class="metric-meta" id="uploadMeta">Background tests keep the last stable upload reading ready.</div>
+            </article>
+
+            <article class="metric-card" data-kind="ping">
+                <div class="metric-top">
+                    <div class="metric-label">
+                        <svg class="metric-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path d="M4 12h3l2-5 4 10 2-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>Latency</span>
+                    </div>
+                    <div class="metric-chip">ms</div>
+                </div>
+                <p class="metric-value" id="pingValue">0.00 <small>ms</small></p>
+                <div class="metric-meta" id="pingMeta">Lower latency means a snappier and more stable connection.</div>
+            </article>
+        </section>
+
+        <section class="action-panel">
+            <div class="actions">
+                <button id="triggerBtn" class="action-button" type="button">
+                    <span class="button-label">Check Performance</span>
+                </button>
+                <div class="status-stack">
+                    <p class="status" id="statusLine">System ready. Background sync will keep the cache warm.</p>
+                    <div class="time" id="timeLine">Awaiting the first saved result.</div>
+                </div>
+            </div>
+        </section>
+    </section>
+</main>
+
 <script>
-// 🎬 Animate values
-function animate(id, value, unit) {
-    let start = 0;
-    let duration = 800;
-    let startTime = null;
-
-    function step(timestamp) {
-        if (!startTime) startTime = timestamp;
-        let progress = Math.min((timestamp - startTime) / duration, 1);
-        let current = (progress * value).toFixed(2);
-        document.getElementById(id).innerText = current + " " + unit;
-
-        if (progress < 1) requestAnimationFrame(step);
-    }
-
-    requestAnimationFrame(step);
-}
-
-// 🎨 Color logic
-function setColor(id, value, type) {
-    let el = document.getElementById(id);
-
-    if (type === "download") {
-        el.style.color = value > 100 ? "#22c55e" : value > 50 ? "#facc15" : "#ef4444";
-    }
-    if (type === "upload") {
-        el.style.color = value > 20 ? "#22c55e" : value > 10 ? "#facc15" : "#ef4444";
-    }
-    if (type === "ping") {
-        el.style.color = value < 30 ? "#22c55e" : value < 60 ? "#facc15" : "#ef4444";
-    }
-}
-
-async function fetchMetrics() {
-    try {
-        const res = await fetch('metrics.json?t=' + new Date().getTime());
-        const data = await res.json();
-
-        // Update UI with real values
-        animate("download", data.download, "Mbps");
-        animate("upload", data.upload, "Mbps");
-        animate("ping", data.ping, "ms");
-
-        setColor("download", data.download, "download");
-        setColor("upload", data.upload, "upload");
-        setColor("ping", data.ping, "ping");
-
-        document.querySelector(".status").innerText = "🟢 Live Data";
-        document.getElementById("time").innerText =
-            "Updated: " + data.timestamp;
-
-    } catch (err) {
-        console.error(err);
-        document.querySelector(".status").innerText = "🔴 Error";
-    }
-}
-window.onload = fetchMetrics;
-setInterval(fetchMetrics, 5000);
-
-
-// Run on load
-window.onload = () => {
-    animate("download", data.download, "Mbps");
-    animate("upload", data.upload, "Mbps");
-    animate("ping", data.ping, "ms");
-
-    setColor("download", data.download, "download");
-    setColor("upload", data.upload, "upload");
-    setColor("ping", data.ping, "ping");
-
-    // Show time
-    document.getElementById("time").innerText =
-        "Updated: " + new Date().toLocaleTimeString();
+const state = {
+    displayedTimestamp: null,
+    lastMetrics: null,
+    pollHandle: null,
+    audioCtx: null,
+    ambientNodes: null,
+    ambientStarted: false,
+    activeRequestId: 0,
 };
-</script>
 
+const introDuration = 3000;
+const fastRevealDelay = 450;
+
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function setLoading(isLoading) {
+    const dashboard = document.getElementById("dashboard");
+    const button = document.getElementById("triggerBtn");
+    const label = button.querySelector(".button-label");
+
+    dashboard.classList.toggle("loading", isLoading);
+    dashboard.classList.toggle("testing", isLoading);
+    button.classList.toggle("loading", isLoading);
+    label.textContent = isLoading ? "Checking..." : "Check Performance";
+}
+
+function animateMetric(id, value, unit) {
+    const element = document.getElementById(id);
+    const currentText = element.textContent.trim().split(" ")[0];
+    const startValue = Number.parseFloat(currentText) || 0;
+    const targetValue = Number.parseFloat(value) || 0;
+    const duration = 900;
+    const started = performance.now();
+
+    function frame(now) {
+        const progress = Math.min((now - started) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = startValue + (targetValue - startValue) * eased;
+        element.innerHTML = `${current.toFixed(2)} <small>${unit}</small>`;
+
+        if (progress < 1) {
+            requestAnimationFrame(frame);
+        }
+    }
+
+    requestAnimationFrame(frame);
+}
+
+function metricTone(value, type) {
+    if (type === "download") {
+        if (value >= 150) return { color: "#7bffc7", label: "Excellent throughput" };
+        if (value >= 60) return { color: "#7ef2ff", label: "Healthy download speed" };
+        return { color: "#ffd27a", label: "Could be faster" };
+    }
+
+    if (type === "upload") {
+        if (value >= 35) return { color: "#7bffc7", label: "Strong upload capacity" };
+        if (value >= 15) return { color: "#7ef2ff", label: "Stable upload speed" };
+        return { color: "#ffd27a", label: "Upload is on the lighter side" };
+    }
+
+    if (value <= 20) return { color: "#7bffc7", label: "Very responsive latency" };
+    if (value <= 45) return { color: "#7ef2ff", label: "Good latency" };
+    return { color: "#ff8c9f", label: "Latency is a bit elevated" };
+}
+
+function applyMetricTone(valueId, metaId, value, type) {
+    const tone = metricTone(value, type);
+    document.getElementById(valueId).style.color = tone.color;
+    document.getElementById(metaId).textContent = tone.label;
+}
+
+function updateLivePill(running) {
+    const pill = document.getElementById("livePill");
+    pill.classList.remove("syncing", "idle");
+
+    if (running) {
+        pill.classList.add("syncing");
+        pill.textContent = "Background sync active";
+        return;
+    }
+
+    pill.classList.add("idle");
+    pill.textContent = "Cache standing by";
+}
+
+function renderMetrics(data, statusText) {
+    state.lastMetrics = data;
+    animateMetric("downloadValue", data.download, "Mbps");
+    animateMetric("uploadValue", data.upload, "Mbps");
+    animateMetric("pingValue", data.ping, "ms");
+
+    applyMetricTone("downloadValue", "downloadMeta", data.download, "download");
+    applyMetricTone("uploadValue", "uploadMeta", data.upload, "upload");
+    applyMetricTone("pingValue", "pingMeta", data.ping, "ping");
+
+    updateLivePill(Boolean(data.running));
+    state.displayedTimestamp = data.timestamp || null;
+
+    document.getElementById("statusLine").textContent = statusText;
+    document.getElementById("timeLine").textContent = data.timestamp
+        ? `Saved reading from ${data.timestamp}`
+        : "Timestamp unavailable";
+}
+
+async function fetchMetrics(statusText = "Latest saved snapshot loaded.") {
+    const response = await fetch("/metrics");
+    const data = await response.json();
+
+    if (!response.ok || data.error) {
+        throw new Error(data.error || "Unable to load metrics");
+    }
+
+    renderMetrics(data, statusText);
+    return data;
+}
+
+function showCachedMetricsWhileRefreshing() {
+    if (!state.lastMetrics) {
+        return;
+    }
+
+    renderMetrics(
+        {
+            ...state.lastMetrics,
+            running: true,
+        },
+        "Showing the previous saved result while a fresh test runs."
+    );
+}
+
+function stopPolling() {
+    if (state.pollHandle) {
+        clearInterval(state.pollHandle);
+        state.pollHandle = null;
+    }
+}
+
+function startRefreshPolling(previousTimestamp) {
+    stopPolling();
+
+    let attempts = 0;
+    state.pollHandle = setInterval(async () => {
+        attempts += 1;
+
+        try {
+            const response = await fetch("/metrics");
+            const data = await response.json();
+
+            if (!response.ok || data.error) {
+                return;
+            }
+
+            updateLivePill(Boolean(data.running));
+
+            if (data.timestamp && data.timestamp !== previousTimestamp) {
+                renderMetrics(data, "Fresh background test completed.");
+                playSfx("complete");
+                stopPolling();
+                return;
+            }
+
+            if (attempts >= 8) {
+                document.getElementById("statusLine").textContent = "Showing the latest saved snapshot. Background refresh is still warming up.";
+                stopPolling();
+            }
+        } catch (error) {
+            if (attempts >= 8) {
+                stopPolling();
+            }
+        }
+    }, 1200);
+}
+
+function createAudioContext() {
+    if (state.audioCtx) {
+        return state.audioCtx;
+    }
+
+    const AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtor) {
+        return null;
+    }
+
+    state.audioCtx = new AudioCtor();
+    return state.audioCtx;
+}
+
+function playTone(ctx, frequency, start, duration, type, gainValue) {
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(gainValue, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.04);
+}
+
+function playSfx(mode) {
+    const ctx = createAudioContext();
+    if (!ctx) {
+        return;
+    }
+
+    const now = ctx.currentTime + 0.02;
+
+    try {
+        if (mode === "intro") {
+            [220, 277, 330, 440].forEach((frequency, index) => {
+                playTone(ctx, frequency, now + index * 0.34, 0.28, "sine", 0.045);
+            });
+            playTone(ctx, 554, now + 1.55, 0.38, "triangle", 0.035);
+            return;
+        }
+
+        if (mode === "start") {
+            playTone(ctx, 294, now, 0.24, "triangle", 0.05);
+            playTone(ctx, 392, now + 0.14, 0.28, "sine", 0.045);
+            return;
+        }
+
+        if (mode === "complete") {
+            playTone(ctx, 392, now, 0.2, "triangle", 0.05);
+            playTone(ctx, 523, now + 0.16, 0.28, "sine", 0.05);
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+function startAmbientMusic() {
+    const ctx = createAudioContext();
+    if (!ctx || state.ambientStarted) {
+        return;
+    }
+
+    const master = ctx.createGain();
+    const low = ctx.createOscillator();
+    const mid = ctx.createOscillator();
+    const shimmer = ctx.createOscillator();
+    const lowGain = ctx.createGain();
+    const midGain = ctx.createGain();
+    const shimmerGain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    filter.type = "lowpass";
+    filter.frequency.value = 880;
+    filter.Q.value = 0.7;
+
+    low.type = "sine";
+    mid.type = "triangle";
+    shimmer.type = "sine";
+
+    low.frequency.value = 110;
+    mid.frequency.value = 220;
+    shimmer.frequency.value = 440;
+
+    lowGain.gain.value = 0.018;
+    midGain.gain.value = 0.01;
+    shimmerGain.gain.value = 0.004;
+    master.gain.value = 0.028;
+
+    low.connect(lowGain);
+    mid.connect(midGain);
+    shimmer.connect(shimmerGain);
+    lowGain.connect(filter);
+    midGain.connect(filter);
+    shimmerGain.connect(filter);
+    filter.connect(master);
+    master.connect(ctx.destination);
+
+    low.start();
+    mid.start();
+    shimmer.start();
+
+    state.ambientNodes = { master, low, mid, shimmer };
+    state.ambientStarted = true;
+
+    const wobble = () => {
+        if (!state.audioCtx || state.audioCtx.state === "closed") {
+            return;
+        }
+
+        const now = ctx.currentTime;
+        low.frequency.cancelScheduledValues(now);
+        mid.frequency.cancelScheduledValues(now);
+        shimmer.frequency.cancelScheduledValues(now);
+
+        low.frequency.linearRampToValueAtTime(110 + Math.random() * 8, now + 5);
+        mid.frequency.linearRampToValueAtTime(220 + Math.random() * 16, now + 5);
+        shimmer.frequency.linearRampToValueAtTime(440 + Math.random() * 30, now + 5);
+        master.gain.linearRampToValueAtTime(0.025 + Math.random() * 0.01, now + 5);
+    };
+
+    wobble();
+    window.setInterval(wobble, 5000);
+}
+
+async function unlockAudio() {
+    const ctx = createAudioContext();
+    if (!ctx) {
+        return;
+    }
+
+    try {
+        if (ctx.state === "suspended") {
+            await ctx.resume();
+        }
+        startAmbientMusic();
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function triggerPerformance() {
+    const button = document.getElementById("triggerBtn");
+    const requestId = ++state.activeRequestId;
+    const previousTimestamp = state.displayedTimestamp || (state.lastMetrics && state.lastMetrics.timestamp);
+
+    await unlockAudio();
+    setLoading(true);
+    showCachedMetricsWhileRefreshing();
+    document.getElementById("statusLine").textContent = "Checking performance using the last saved result while live data refreshes.";
+    playSfx("start");
+
+    const startedAt = performance.now();
+
+    try {
+        const response = await fetch("/trigger-performance", { method: "POST" });
+        const payload = await response.json();
+        const elapsed = performance.now() - startedAt;
+
+        await sleep(Math.max(0, fastRevealDelay - elapsed));
+
+        if (requestId !== state.activeRequestId) {
+            return;
+        }
+
+        if (payload.data) {
+            renderMetrics(payload.data, payload.message || "Latest saved snapshot loaded.");
+            startRefreshPolling(payload.data.timestamp || previousTimestamp);
+            return;
+        }
+
+        if (response.status === 202) {
+            document.getElementById("statusLine").textContent = payload.message || "Preparing your first saved snapshot.";
+            document.getElementById("timeLine").textContent = "First test is being prepared in the background.";
+            startRefreshPolling(previousTimestamp);
+            return;
+        }
+
+        throw new Error(payload.error || "Unable to trigger performance load");
+    } catch (error) {
+        console.error(error);
+        if (requestId === state.activeRequestId) {
+            if (state.lastMetrics) {
+                renderMetrics(
+                    {
+                        ...state.lastMetrics,
+                        running: false,
+                    },
+                    "Live refresh is delayed. Showing the previous saved result."
+                );
+            } else {
+                document.getElementById("statusLine").textContent = "Unable to load live data right now.";
+            }
+        }
+    } finally {
+        if (requestId === state.activeRequestId) {
+            button.blur();
+            setLoading(false);
+        }
+    }
+}
+
+async function revealDashboard() {
+    const overlay = document.getElementById("introOverlay");
+    const shell = document.getElementById("appShell");
+
+    overlay.classList.add("hidden");
+    shell.classList.remove("hidden");
+
+    try {
+        await fetchMetrics("Latest saved snapshot ready.");
+    } catch (error) {
+        document.getElementById("statusLine").textContent = "Preparing the first saved snapshot. Press the button in a moment.";
+        document.getElementById("timeLine").textContent = "No saved reading detected yet.";
+        updateLivePill(true);
+    }
+}
+
+function startIntroSequence() {
+    playSfx("intro");
+    window.setTimeout(() => {
+        revealDashboard();
+    }, introDuration);
+}
+
+window.addEventListener("load", () => {
+    document.getElementById("triggerBtn").addEventListener("click", triggerPerformance);
+    window.addEventListener("pointerdown", unlockAudio, { once: true });
+    window.addEventListener("keydown", unlockAudio, { once: true });
+    startIntroSequence();
+});
+</script>
 </body>
 </html>
