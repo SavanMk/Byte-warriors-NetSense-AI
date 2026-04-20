@@ -276,7 +276,11 @@ body::after {
     border-radius: 36px;
     background: linear-gradient(180deg, rgba(8, 20, 36, 0.74), rgba(8, 18, 32, 0.6));
     border: 1px solid rgba(160, 226, 255, 0.16);
-    box-shadow: var(--shadow);
+    box-shadow:
+        0 0 0 1px rgba(182, 120, 255, 0.16),
+        0 0 26px rgba(182, 120, 255, 0.18),
+        0 0 60px rgba(146, 88, 255, 0.14),
+        var(--shadow);
     backdrop-filter: blur(24px);
     overflow: hidden;
 }
@@ -286,6 +290,18 @@ body::after {
     position: absolute;
     inset: 0;
     background: linear-gradient(130deg, rgba(126, 242, 255, 0.06), transparent 30%, transparent 70%, rgba(104, 166, 255, 0.08));
+    pointer-events: none;
+}
+
+.dashboard::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    border: 1px solid rgba(196, 142, 255, 0.22);
+    box-shadow:
+        inset 0 0 24px rgba(178, 113, 255, 0.08),
+        0 0 32px rgba(178, 113, 255, 0.16);
     pointer-events: none;
 }
 
@@ -395,12 +411,22 @@ body::after {
 
 .metric-card {
     position: relative;
+    --metric-glow-rgb: 160, 226, 255;
+    --metric-glow-border: rgba(160, 226, 255, 0.12);
+    --metric-glow-soft: rgba(160, 226, 255, 0);
+    --metric-glow-strong: rgba(160, 226, 255, 0);
     min-height: 214px;
     padding: 20px;
     border-radius: var(--radius-lg);
     background: linear-gradient(180deg, rgba(13, 28, 48, 0.82), rgba(9, 22, 38, 0.62));
-    border: 1px solid rgba(160, 226, 255, 0.12);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 16px 36px rgba(0, 0, 0, 0.24);
+    border: 1px solid var(--metric-glow-border);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        inset 0 0 22px var(--metric-glow-soft),
+        0 0 0 1px rgba(var(--metric-glow-rgb), 0.12),
+        0 0 28px var(--metric-glow-soft),
+        0 0 54px var(--metric-glow-strong),
+        0 16px 36px rgba(0, 0, 0, 0.24);
     overflow: hidden;
     transform-style: preserve-3d;
     transition: transform 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
@@ -439,8 +465,14 @@ body::after {
 
 .metric-card:hover {
     transform: translateY(-7px) rotateX(3deg) rotateY(-2deg);
-    border-color: var(--line-strong);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 52px rgba(0, 0, 0, 0.28);
+    border-color: var(--metric-glow-border);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 0 26px var(--metric-glow-soft),
+        0 0 0 1px rgba(var(--metric-glow-rgb), 0.18),
+        0 0 34px var(--metric-glow-soft),
+        0 0 66px var(--metric-glow-strong),
+        0 24px 52px rgba(0, 0, 0, 0.28);
 }
 
 .dashboard.testing .metric-card {
@@ -557,7 +589,13 @@ body::after {
     padding: 18px 20px;
     border-radius: 28px;
     background: linear-gradient(180deg, rgba(10, 22, 40, 0.84), rgba(8, 18, 32, 0.62));
-    border: 1px solid rgba(160, 226, 255, 0.12);
+    border: 1px solid rgba(104, 166, 255, 0.22);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 0 26px rgba(126, 242, 255, 0.05),
+        0 0 0 1px rgba(126, 242, 255, 0.1),
+        0 0 26px rgba(126, 242, 255, 0.12),
+        0 0 56px rgba(104, 166, 255, 0.14);
 }
 
 .actions {
@@ -649,6 +687,208 @@ body::after {
     letter-spacing: 0.05em;
 }
 
+.insights-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 18px;
+    margin-top: 22px;
+}
+
+.insight-panel {
+    position: relative;
+    padding: 22px;
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(10, 22, 40, 0.86), rgba(8, 18, 32, 0.66));
+    border: 1px solid rgba(160, 226, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.chatbot-panel {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 0 28px rgba(255, 255, 255, 0.04),
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 0 26px rgba(255, 255, 255, 0.12),
+        0 0 56px rgba(255, 255, 255, 0.08),
+        0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.recommendation-panel {
+    border-color: rgba(255, 179, 71, 0.26);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 240, 220, 0.05),
+        inset 0 0 28px rgba(255, 166, 43, 0.05),
+        0 0 0 1px rgba(255, 179, 71, 0.12),
+        0 0 26px rgba(255, 153, 51, 0.14),
+        0 0 58px rgba(255, 128, 0, 0.12),
+        0 16px 36px rgba(0, 0, 0, 0.24);
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.panel-title {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.status-badge {
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(239, 248, 255, 0.82);
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.status-badge[data-status="healthy"] {
+    color: var(--mint);
+}
+
+.status-badge[data-status="watch"] {
+    color: var(--gold);
+}
+
+.status-badge[data-status="attention"] {
+    color: var(--rose);
+}
+
+.status-badge[data-status="waiting"],
+.status-badge[data-status="warming_up"] {
+    color: var(--aqua);
+}
+
+.insight-summary {
+    margin: 0 0 16px;
+    color: rgba(239, 248, 255, 0.82);
+    line-height: 1.6;
+}
+
+.insight-list {
+    margin: 0;
+    padding-left: 18px;
+    color: rgba(239, 248, 255, 0.7);
+    line-height: 1.7;
+}
+
+.chat-log {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 238px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.chat-bubble {
+    max-width: 92%;
+    padding: 12px 14px;
+    border-radius: 18px;
+    line-height: 1.55;
+    font-size: 0.94rem;
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeSlideIn 0.45s ease forwards;
+}
+
+.chat-bubble.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(104, 166, 255, 0.24), rgba(126, 242, 255, 0.18));
+    border: 1px solid rgba(126, 242, 255, 0.18);
+}
+
+.chat-bubble.bot {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(239, 248, 255, 0.88);
+}
+
+.chat-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 16px 0 14px;
+}
+
+.chat-suggestion {
+    padding: 10px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(160, 226, 255, 0.14);
+    background: rgba(126, 242, 255, 0.05);
+    color: rgba(239, 248, 255, 0.82);
+    cursor: pointer;
+    transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.chat-suggestion:hover {
+    transform: translateY(-1px);
+    border-color: rgba(160, 226, 255, 0.28);
+    background: rgba(126, 242, 255, 0.1);
+}
+
+.chat-form {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.chat-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(160, 226, 255, 0.16);
+    background: rgba(4, 12, 22, 0.72);
+    color: var(--text);
+    font: inherit;
+}
+
+.chat-input::placeholder {
+    color: rgba(239, 248, 255, 0.38);
+}
+
+.chat-input:focus {
+    outline: none;
+    border-color: rgba(126, 242, 255, 0.36);
+    box-shadow: 0 0 0 3px rgba(126, 242, 255, 0.08);
+}
+
+.chat-send {
+    flex: 0 0 auto;
+    padding: 14px 18px;
+    border: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255, 210, 122, 0.9), rgba(126, 242, 255, 0.8));
+    color: #04101d;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+}
+
+.chat-send:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+@keyframes fadeSlideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes drift {
     0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
     50% { transform: translate3d(18px, -18px, 0) scale(1.08); }
@@ -724,6 +964,10 @@ body::after {
     }
 
     .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .insights-grid {
         grid-template-columns: 1fr;
     }
 
@@ -843,8 +1087,8 @@ body::after {
                     </div>
                     <div class="metric-chip">Mbps</div>
                 </div>
-                <p class="metric-value" id="downloadValue">0.00 <small>Mbps</small></p>
-                <div class="metric-meta" id="downloadMeta">Prepared to load your most recent saved result.</div>
+                <p class="metric-value" id="downloadValue">-- <small>Mbps</small></p>
+                <div class="metric-meta" id="downloadMeta">Press Test Performance to reveal your latest saved download speed.</div>
             </article>
 
             <article class="metric-card" data-kind="upload">
@@ -857,8 +1101,8 @@ body::after {
                     </div>
                     <div class="metric-chip">Mbps</div>
                 </div>
-                <p class="metric-value" id="uploadValue">0.00 <small>Mbps</small></p>
-                <div class="metric-meta" id="uploadMeta">Background tests keep the last stable upload reading ready.</div>
+                <p class="metric-value" id="uploadValue">-- <small>Mbps</small></p>
+                <div class="metric-meta" id="uploadMeta">Upload results stay hidden until you start a visible test.</div>
             </article>
 
             <article class="metric-card" data-kind="ping">
@@ -871,34 +1115,66 @@ body::after {
                     </div>
                     <div class="metric-chip">ms</div>
                 </div>
-                <p class="metric-value" id="pingValue">0.00 <small>ms</small></p>
-                <div class="metric-meta" id="pingMeta">Lower latency means a snappier and more stable connection.</div>
+                <p class="metric-value" id="pingValue">-- <small>ms</small></p>
+                <div class="metric-meta" id="pingMeta">Latency will appear here after your first button click.</div>
             </article>
         </section>
 
         <section class="action-panel">
             <div class="actions">
                 <button id="triggerBtn" class="action-button" type="button">
-                    <span class="button-label">Check Performance</span>
+                    <span class="button-label">Test Performance</span>
                 </button>
                 <div class="status-stack">
-                    <p class="status" id="statusLine">System ready. Background sync will keep the cache warm.</p>
-                    <div class="time" id="timeLine">Awaiting the first saved result.</div>
+                    <p class="status" id="statusLine">Press Test Performance to view results.</p>
+                    <div class="time" id="timeLine">Metrics stay hidden until you start the visible dashboard.</div>
                 </div>
             </div>
+        </section>
+
+        <section class="insights-grid">
+            <article class="insight-panel recommendation-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">AI Recommendation Engine</h2>
+                    <div class="status-badge" id="recommendationStatus" data-status="waiting">Waiting</div>
+                </div>
+                <p class="insight-summary" id="recommendationSummary">Press Test Performance to analyze the latest saved network snapshot.</p>
+                <ul class="insight-list" id="recommendationList">
+                    <li>Recommendations will appear here after the first visible metrics load.</li>
+                </ul>
+            </article>
+
+            <article class="insight-panel chatbot-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">NetSense Chatbot</h2>
+                </div>
+                <div class="chat-log" id="chatLog">
+                    <div class="chat-bubble bot">Ask about your network health, ping, download speed, or how to improve performance.</div>
+                </div>
+                <div class="chat-suggestions">
+                    <button class="chat-suggestion" type="button" data-question="How is my network?">How is my network?</button>
+                    <button class="chat-suggestion" type="button" data-question="Why is my ping high?">Why is my ping high?</button>
+                    <button class="chat-suggestion" type="button" data-question="How can I improve speed?">How can I improve speed?</button>
+                </div>
+                <form class="chat-form" id="chatForm">
+                    <input class="chat-input" id="chatInput" type="text" placeholder="Ask a network question..." autocomplete="off">
+                    <button class="chat-send" id="chatSendBtn" type="submit">Send</button>
+                </form>
+            </article>
         </section>
     </section>
 </main>
 
 <script>
 const state = {
+    hasUserStartedTest: false,
     displayedTimestamp: null,
     lastMetrics: null,
-    pollHandle: null,
     audioCtx: null,
     ambientNodes: null,
     ambientStarted: false,
     activeRequestId: 0,
+    chatRequestInFlight: false,
 };
 
 const introDuration = 3000;
@@ -916,12 +1192,12 @@ function setLoading(isLoading) {
     dashboard.classList.toggle("loading", isLoading);
     dashboard.classList.toggle("testing", isLoading);
     button.classList.toggle("loading", isLoading);
-    label.textContent = isLoading ? "Checking..." : "Check Performance";
+    label.textContent = isLoading ? "Testing..." : "Test Performance";
 }
 
 function animateMetric(id, value, unit) {
     const element = document.getElementById(id);
-    const currentText = element.textContent.trim().split(" ")[0];
+    const currentText = element.textContent.trim().split(" ")[0].replace("--", "0");
     const startValue = Number.parseFloat(currentText) || 0;
     const targetValue = Number.parseFloat(value) || 0;
     const duration = 900;
@@ -943,31 +1219,47 @@ function animateMetric(id, value, unit) {
 
 function metricTone(value, type) {
     if (type === "download") {
-        if (value >= 150) return { color: "#7bffc7", label: "Excellent throughput" };
-        if (value >= 60) return { color: "#7ef2ff", label: "Healthy download speed" };
-        return { color: "#ffd27a", label: "Could be faster" };
+        if (value >= 150) return { color: "#7bffc7", glowRgb: "123, 255, 199", label: "Excellent throughput" };
+        if (value >= 60) return { color: "#7ef2ff", glowRgb: "126, 242, 255", label: "Healthy download speed" };
+        return { color: "#ffd27a", glowRgb: "255, 210, 122", label: "Could be faster" };
     }
 
     if (type === "upload") {
-        if (value >= 35) return { color: "#7bffc7", label: "Strong upload capacity" };
-        if (value >= 15) return { color: "#7ef2ff", label: "Stable upload speed" };
-        return { color: "#ffd27a", label: "Upload is on the lighter side" };
+        if (value >= 35) return { color: "#7bffc7", glowRgb: "123, 255, 199", label: "Strong upload capacity" };
+        if (value >= 15) return { color: "#68a6ff", glowRgb: "104, 166, 255", label: "Stable upload speed" };
+        return { color: "#ffd27a", glowRgb: "255, 210, 122", label: "Upload is on the lighter side" };
     }
 
-    if (value <= 20) return { color: "#7bffc7", label: "Very responsive latency" };
-    if (value <= 45) return { color: "#7ef2ff", label: "Good latency" };
-    return { color: "#ff8c9f", label: "Latency is a bit elevated" };
+    if (value <= 20) return { color: "#7bffc7", glowRgb: "123, 255, 199", label: "Very responsive latency" };
+    if (value <= 45) return { color: "#68a6ff", glowRgb: "104, 166, 255", label: "Good latency" };
+    return { color: "#ff8c9f", glowRgb: "255, 140, 159", label: "Latency is a bit elevated" };
 }
 
 function applyMetricTone(valueId, metaId, value, type) {
     const tone = metricTone(value, type);
-    document.getElementById(valueId).style.color = tone.color;
+    const valueElement = document.getElementById(valueId);
+    const card = valueElement.closest(".metric-card");
+
+    valueElement.style.color = tone.color;
     document.getElementById(metaId).textContent = tone.label;
+
+    if (card) {
+        card.style.setProperty("--metric-glow-rgb", tone.glowRgb);
+        card.style.setProperty("--metric-glow-border", `rgba(${tone.glowRgb}, 0.72)`);
+        card.style.setProperty("--metric-glow-soft", `rgba(${tone.glowRgb}, 0.18)`);
+        card.style.setProperty("--metric-glow-strong", `rgba(${tone.glowRgb}, 0.32)`);
+    }
 }
 
 function updateLivePill(running) {
     const pill = document.getElementById("livePill");
     pill.classList.remove("syncing", "idle");
+
+    if (!state.hasUserStartedTest) {
+        pill.classList.add("idle");
+        pill.textContent = "Waiting for manual start";
+        return;
+    }
 
     if (running) {
         pill.classList.add("syncing");
@@ -977,6 +1269,53 @@ function updateLivePill(running) {
 
     pill.classList.add("idle");
     pill.textContent = "Cache standing by";
+}
+
+function setMetricPlaceholder() {
+    [
+        ["downloadValue", "downloadMeta", "Press Test Performance to reveal your latest saved download speed."],
+        ["uploadValue", "uploadMeta", "Upload results stay hidden until you start a visible test."],
+        ["pingValue", "pingMeta", "Latency will appear here after your first button click."],
+    ].forEach(([valueId, metaId, metaText]) => {
+        const valueElement = document.getElementById(valueId);
+        const card = valueElement.closest(".metric-card");
+        valueElement.innerHTML = valueId === "pingValue" ? "-- <small>ms</small>" : "-- <small>Mbps</small>";
+        valueElement.style.color = "rgba(239, 248, 255, 0.9)";
+        document.getElementById(metaId).textContent = metaText;
+
+        if (card) {
+            card.style.setProperty("--metric-glow-rgb", "160, 226, 255");
+            card.style.setProperty("--metric-glow-border", "rgba(160, 226, 255, 0.12)");
+            card.style.setProperty("--metric-glow-soft", "rgba(160, 226, 255, 0)");
+            card.style.setProperty("--metric-glow-strong", "rgba(160, 226, 255, 0)");
+        }
+    });
+}
+
+function renderRecommendation(recommendation) {
+    const fallback = recommendation || {
+        status: "waiting",
+        issue_summary: "Press Test Performance to analyze the latest saved network snapshot.",
+        recommendations: ["Recommendations will appear here after the first visible metrics load."],
+    };
+
+    const badge = document.getElementById("recommendationStatus");
+    badge.dataset.status = fallback.status;
+    badge.textContent = fallback.status.replace("_", " ");
+
+    document.getElementById("recommendationSummary").textContent = fallback.issue_summary;
+    document.getElementById("recommendationList").innerHTML = (fallback.recommendations || [])
+        .map((item) => `<li>${item}</li>`)
+        .join("");
+}
+
+function pushChatMessage(role, text) {
+    const log = document.getElementById("chatLog");
+    const bubble = document.createElement("div");
+    bubble.className = `chat-bubble ${role}`;
+    bubble.textContent = text;
+    log.appendChild(bubble);
+    log.scrollTop = log.scrollHeight;
 }
 
 function renderMetrics(data, statusText) {
@@ -991,6 +1330,7 @@ function renderMetrics(data, statusText) {
 
     updateLivePill(Boolean(data.running));
     state.displayedTimestamp = data.timestamp || null;
+    renderRecommendation(data.ai_recommendation);
 
     document.getElementById("statusLine").textContent = statusText;
     document.getElementById("timeLine").textContent = data.timestamp
@@ -1010,61 +1350,36 @@ async function fetchMetrics(statusText = "Latest saved snapshot loaded.") {
     return data;
 }
 
-function showCachedMetricsWhileRefreshing() {
-    if (!state.lastMetrics) {
+async function sendChatMessage(message) {
+    const trimmed = (message || "").trim();
+    if (!trimmed || state.chatRequestInFlight) {
         return;
     }
 
-    renderMetrics(
-        {
-            ...state.lastMetrics,
-            running: true,
-        },
-        "Showing the previous saved result while a fresh test runs."
-    );
-}
+    state.chatRequestInFlight = true;
+    document.getElementById("chatSendBtn").disabled = true;
+    pushChatMessage("user", trimmed);
 
-function stopPolling() {
-    if (state.pollHandle) {
-        clearInterval(state.pollHandle);
-        state.pollHandle = null;
-    }
-}
+    try {
+        const response = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: trimmed }),
+        });
+        const payload = await response.json();
+        pushChatMessage("bot", payload.reply || "I could not generate a reply right now.");
 
-function startRefreshPolling(previousTimestamp) {
-    stopPolling();
-
-    let attempts = 0;
-    state.pollHandle = setInterval(async () => {
-        attempts += 1;
-
-        try {
-            const response = await fetch("/metrics");
-            const data = await response.json();
-
-            if (!response.ok || data.error) {
-                return;
-            }
-
-            updateLivePill(Boolean(data.running));
-
-            if (data.timestamp && data.timestamp !== previousTimestamp) {
-                renderMetrics(data, "Fresh background test completed.");
-                playSfx("complete");
-                stopPolling();
-                return;
-            }
-
-            if (attempts >= 8) {
-                document.getElementById("statusLine").textContent = "Showing the latest saved snapshot. Background refresh is still warming up.";
-                stopPolling();
-            }
-        } catch (error) {
-            if (attempts >= 8) {
-                stopPolling();
-            }
+        if (payload.recommendation) {
+            renderRecommendation(payload.recommendation);
         }
-    }, 1200);
+    } catch (error) {
+        console.error(error);
+        pushChatMessage("bot", "I could not reach the chat service right now.");
+    } finally {
+        state.chatRequestInFlight = false;
+        document.getElementById("chatSendBtn").disabled = false;
+        document.getElementById("chatInput").value = "";
+    }
 }
 
 function createAudioContext() {
@@ -1216,18 +1531,18 @@ async function unlockAudio() {
 async function triggerPerformance() {
     const button = document.getElementById("triggerBtn");
     const requestId = ++state.activeRequestId;
-    const previousTimestamp = state.displayedTimestamp || (state.lastMetrics && state.lastMetrics.timestamp);
 
+    state.hasUserStartedTest = true;
     await unlockAudio();
     setLoading(true);
-    showCachedMetricsWhileRefreshing();
-    document.getElementById("statusLine").textContent = "Checking performance using the last saved result while live data refreshes.";
+    document.getElementById("statusLine").textContent = "Loading the latest stored network snapshot.";
+    document.getElementById("timeLine").textContent = "Fetching saved metrics from the backend.";
     playSfx("start");
 
     const startedAt = performance.now();
 
     try {
-        const response = await fetch("/trigger-performance", { method: "POST" });
+        const response = await fetch("/metrics");
         const payload = await response.json();
         const elapsed = performance.now() - startedAt;
 
@@ -1237,16 +1552,15 @@ async function triggerPerformance() {
             return;
         }
 
-        if (payload.data) {
-            renderMetrics(payload.data, payload.message || "Latest saved snapshot loaded.");
-            startRefreshPolling(payload.data.timestamp || previousTimestamp);
+        if (response.ok && !payload.error) {
+            renderMetrics(payload, "Latest stored snapshot loaded.");
+            playSfx("complete");
             return;
         }
 
-        if (response.status === 202) {
-            document.getElementById("statusLine").textContent = payload.message || "Preparing your first saved snapshot.";
-            document.getElementById("timeLine").textContent = "First test is being prepared in the background.";
-            startRefreshPolling(previousTimestamp);
+        if (response.status === 404) {
+            document.getElementById("statusLine").textContent = payload.error || "No saved metrics are available yet.";
+            document.getElementById("timeLine").textContent = "Background testing is still preparing the first snapshot.";
             return;
         }
 
@@ -1260,10 +1574,11 @@ async function triggerPerformance() {
                         ...state.lastMetrics,
                         running: false,
                     },
-                    "Live refresh is delayed. Showing the previous saved result."
+                    "Unable to fetch a newer snapshot. Showing the last visible result."
                 );
             } else {
-                document.getElementById("statusLine").textContent = "Unable to load live data right now.";
+                document.getElementById("statusLine").textContent = "Unable to load metrics right now.";
+                document.getElementById("timeLine").textContent = "Try Test Performance again in a moment.";
             }
         }
     } finally {
@@ -1280,14 +1595,9 @@ async function revealDashboard() {
 
     overlay.classList.add("hidden");
     shell.classList.remove("hidden");
-
-    try {
-        await fetchMetrics("Latest saved snapshot ready.");
-    } catch (error) {
-        document.getElementById("statusLine").textContent = "Preparing the first saved snapshot. Press the button in a moment.";
-        document.getElementById("timeLine").textContent = "No saved reading detected yet.";
-        updateLivePill(true);
-    }
+    setMetricPlaceholder();
+    renderRecommendation();
+    updateLivePill(false);
 }
 
 function startIntroSequence() {
@@ -1299,6 +1609,15 @@ function startIntroSequence() {
 
 window.addEventListener("load", () => {
     document.getElementById("triggerBtn").addEventListener("click", triggerPerformance);
+    document.getElementById("chatForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await sendChatMessage(document.getElementById("chatInput").value);
+    });
+    document.querySelectorAll(".chat-suggestion").forEach((button) => {
+        button.addEventListener("click", async () => {
+            await sendChatMessage(button.dataset.question || "");
+        });
+    });
     window.addEventListener("pointerdown", unlockAudio, { once: true });
     window.addEventListener("keydown", unlockAudio, { once: true });
     startIntroSequence();
