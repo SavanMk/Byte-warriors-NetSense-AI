@@ -1,10 +1,11 @@
 # app.py
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 import json
 import os
 import threading
 import time
 
+from ai_engine import generate_ai_recommendation, generate_chat_response
 from network_monitor import run_monitor
 
 app = Flask(
@@ -77,6 +78,7 @@ def get_metrics():
 
     payload = {
         **data,
+        "ai_recommendation": generate_ai_recommendation(data),
         "running": monitor_lock.locked(),
         "last_error": monitor_state["last_error"],
     }
@@ -93,14 +95,44 @@ def trigger_performance():
             "status": "warming_up",
             "message": "Preparing your first network snapshot.",
             "running": monitor_lock.locked(),
+            "recommendation": {
+                "status": "warming_up",
+                "issue_summary": "The AI engine is waiting for the first saved metrics snapshot.",
+                "issues": [],
+                "recommendations": ["Keep the dashboard open and the latest saved result will appear after the first test completes."],
+            },
         }), 202
 
     return jsonify({
         "status": "queued",
         "message": "Showing the latest saved result while a fresh test runs in the background.",
         "running": monitor_lock.locked(),
-        "data": data,
+        "data": {
+            **data,
+            "ai_recommendation": generate_ai_recommendation(data),
+        },
     })
+
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    payload = request.get_json(silent=True) or {}
+    message = payload.get("message", "")
+    metrics = load_metrics()
+
+    if metrics is None:
+        return jsonify({
+            "reply": "I do not have a saved network snapshot yet. Run Test Performance first and I will analyze it.",
+            "recommendation": {
+                "status": "warming_up",
+                "issue_summary": "The analyzer is waiting for the first saved metrics snapshot.",
+                "issues": [],
+                "recommendations": ["Press Test Performance to load the latest saved result."],
+            },
+        }), 200
+
+    response = generate_chat_response(message, metrics)
+    return jsonify(response)
 
 
 def start_background_thread():
