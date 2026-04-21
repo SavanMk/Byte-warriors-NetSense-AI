@@ -4,8 +4,11 @@ import json
 import os
 import threading
 import time
+from dotenv import load_dotenv
+load_dotenv()
 
-from ai_engine import generate_ai_recommendation, generate_chat_response
+from ai_engine import generate_ai_recommendation
+from chatbot_service import chatbot_response
 from network_monitor import run_monitor
 
 app = Flask(
@@ -117,22 +120,17 @@ def trigger_performance():
 @app.route('/chat', methods=['POST'])
 def chat():
     payload = request.get_json(silent=True) or {}
-    message = payload.get("message", "")
+    message = str(payload.get("message", "")).strip()
     metrics = load_metrics()
 
-    if metrics is None:
-        return jsonify({
-            "reply": "I do not have a saved network snapshot yet. Run Test Performance first and I will analyze it.",
-            "recommendation": {
-                "status": "warming_up",
-                "issue_summary": "The analyzer is waiting for the first saved metrics snapshot.",
-                "issues": [],
-                "recommendations": ["Press Test Performance to load the latest saved result."],
-            },
-        }), 200
+    if not message:
+        return jsonify({"reply": "Please enter a network question so I can help."}), 400
 
-    response = generate_chat_response(message, metrics)
-    return jsonify(response)
+    if metrics is None:
+        return jsonify({"reply": "I do not have a saved network snapshot yet. Run Test Performance first and I will analyze it."}), 200
+
+    reply = chatbot_response(message, metrics)
+    return jsonify({"reply": reply})
 
 
 def start_background_thread():
