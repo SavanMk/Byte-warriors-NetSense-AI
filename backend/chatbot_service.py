@@ -13,13 +13,8 @@ from urllib import error, request
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
-DEFAULT_BASE_URL = os.getenv(
-    "GEMINI_BASE_URL",
-    "https://generativelanguage.googleapis.com/v1beta/models",
-)
 REQUEST_TIMEOUT_SECONDS = 8
-MAX_COMPLETION_TOKENS = 220
+MAX_COMPLETION_TOKENS = 90
 
 
 def _to_float(value: Any, default: float = 0.0) -> float:
@@ -61,6 +56,14 @@ def _load_local_env_value(key: str) -> str | None:
 def _get_setting(key: str) -> str | None:
     """Prefer real environment variables, then fall back to local .env files."""
     return os.getenv(key) or _load_local_env_value(key)
+
+
+def _get_model() -> str:
+    return _get_setting("GEMINI_MODEL") or "gemini-2.5-flash"
+
+
+def _get_base_url() -> str:
+    return _get_setting("GEMINI_BASE_URL") or "https://generativelanguage.googleapis.com/v1beta/models"
 
 
 def detect_intent(user_input: str) -> str:
@@ -120,7 +123,7 @@ def _network_condition_summary(metrics: dict[str, Any]) -> str:
 
 
 def _fallback_explanation(user_input: str, metrics: dict[str, Any]) -> str:
-    """Return a complete 3 to 4 line reply when the model output is weak or truncated."""
+    """Return a compact 2 to 3 line reply when the model output is weak or truncated."""
     download = _to_float(metrics.get("download"))
     upload = _to_float(metrics.get("upload"))
     ping = _to_float(metrics.get("ping"))
@@ -132,23 +135,23 @@ def _fallback_explanation(user_input: str, metrics: dict[str, Any]) -> str:
     )
 
     if ping >= 100:
-        second_line = "The main issue is very high latency, which can cause lag in gaming, calls, and slow page response even when speed looks decent."
-        suggestion = "Pause background traffic, move closer to the router, and restart the router if the high ping continues across multiple tests."
+        second_line = "The main issue is very high latency, so gaming, calls, and page response may feel laggy."
+        suggestion = "Pause background traffic, move closer to the router, and restart the router if high ping continues."
     elif ping >= 60:
-        second_line = "Latency is higher than ideal, so the connection may feel inconsistent during gaming, voice calls, or live streaming."
-        suggestion = "Reduce competing traffic, prefer 5 GHz at close range, and retest from a stronger WiFi spot."
+        second_line = "Latency is above ideal, so the connection may feel inconsistent during calls, streaming, or gaming."
+        suggestion = "Reduce competing traffic, prefer 5 GHz nearby, and retest from a stronger WiFi spot."
     elif download < 25 and upload < 10:
-        second_line = "Both download and upload are low, so the connection may struggle with streaming, cloud sync, and video meetings."
-        suggestion = "Check signal strength, reduce simultaneous device usage, and contact your ISP if speeds stay low after a router restart."
+        second_line = "Both download and upload are low, so streaming, meetings, and cloud sync may struggle."
+        suggestion = "Check signal strength, reduce device load, and contact your ISP if speeds stay low after a reboot."
     elif download < 25:
-        second_line = "Download speed is the main limitation right now, so browsing, streaming, and app downloads may feel slower than expected."
-        suggestion = "Test closer to the router, reduce heavy usage on other devices, and retest to confirm whether the slowdown is persistent."
+        second_line = "Download speed is the main limit right now, so browsing and streaming may feel slower than expected."
+        suggestion = "Test closer to the router and reduce heavy usage on other devices before retesting."
     elif upload < 10:
-        second_line = "Upload speed is the weakest area, which can affect video calls, uploads, backups, and cloud sync."
-        suggestion = "Pause uploads from other devices and switch to a stronger WiFi band or location before testing again."
+        second_line = "Upload speed is the weakest area, which can hurt video calls, uploads, and backups."
+        suggestion = "Pause uploads on other devices and switch to a stronger WiFi band or location."
     else:
-        second_line = "Overall the connection looks reasonably balanced, with stable latency and usable throughput for everyday work and streaming."
-        suggestion = "If you still notice issues, test the same task again while checking device-specific apps, WiFi signal, and router load."
+        second_line = "Overall the connection looks balanced for normal browsing, work, and streaming."
+        suggestion = "If issues continue, retest while checking app load, WiFi signal, and router congestion."
 
     if "ping" in normalized or "latency" in normalized:
         second_line = (
@@ -175,7 +178,7 @@ def _looks_incomplete(response_text: str) -> bool:
     if not text:
         return True
 
-    if len(text) < 80:
+    if len(text) < 45:
         return True
 
     if text.endswith(("or", "and", "because", "but", "with", "to", "of", "by", ",")):
@@ -192,9 +195,10 @@ def _system_instruction() -> str:
         "You are NetSense AI, a helpful network assistant. "
         "Answer using the provided network metrics. "
         "Use all three values: download, upload, and ping. "
-        "Keep the reply short in exactly 3 or 4 complete lines. "
-        "Each line must be a complete sentence. "
-        "Give a clear explanation plus actionable suggestions. "
+        "Keep the reply short in exactly 2 or 3 complete lines. "
+        "Each line must be a complete sentence and under 18 words where possible. "
+        "Give a clear explanation plus one actionable suggestion. "
+        "Avoid filler, greetings, and repetition. "
         "Do not claim to have fixed anything yourself."
     )
 
@@ -208,8 +212,8 @@ def _build_prompt(user_input: str, metrics: dict[str, Any]) -> str:
         f"{_format_metrics(metrics)}\n\n"
         "Context summary:\n"
         f"{_network_condition_summary(metrics)}\n\n"
-        "Instruction: respond as a network assistant using all three metrics, "
-        "and make sure the final answer is complete and not cut off."
+        "Instruction: respond as a network assistant using all three metrics in only 2 or 3 short lines, "
+        "with one concise recommendation and no extra filler."
     )
 
 
@@ -263,8 +267,8 @@ def ask_ai(user_input: str, metrics: dict[str, Any]) -> str:
         },
     }
 
-    base_url = DEFAULT_BASE_URL.rstrip("/")
-    chat_url = f"{base_url}/{DEFAULT_MODEL}:generateContent"
+    base_url = _get_base_url().rstrip("/")
+    chat_url = f"{base_url}/{_get_model()}:generateContent"
 
     req = request.Request(
         chat_url,
