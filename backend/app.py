@@ -1,15 +1,23 @@
-# app.py
-from flask import Flask, jsonify, render_template, request
 import json
 import os
 import threading
 import time
-from dotenv import load_dotenv
-load_dotenv()
+from typing import Any
 
-from ai_engine import generate_ai_recommendation
-from chatbot_service import chatbot_response
-from network_monitor import run_monitor
+from dotenv import load_dotenv
+from flask import Flask, jsonify, render_template, request
+
+try:
+    from google import genai
+except ImportError:
+    genai = None
+
+try:
+    from .ai_engine import generate_ai_recommendation
+    from .network_monitor import run_monitor
+except ImportError:
+    from ai_engine import generate_ai_recommendation
+    from network_monitor import run_monitor
 
 app = Flask(
     __name__,
@@ -19,51 +27,344 @@ app = Flask(
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
+HISTORY_FILE = os.path.join(BASE_DIR, 'history.json')
+MAX_HISTORY_ITEMS = 10
+BACKGROUND_INTERVAL_SECONDS = int(os.getenv('BACKGROUND_TEST_INTERVAL', '180'))
+GEMINI_DEFAULT_MODEL = 'gemini-2.5-flash'
+GEMINI_FALLBACK_DEFAULT_MODEL = 'gemini-2.5-flash-lite'
+
 monitor_lock = threading.Lock()
 refresh_event = threading.Event()
+background_thread = None
+background_thread_lock = threading.Lock()
 monitor_state = {
-    "last_run_started": None,
-    "last_run_finished": None,
-    "last_error": None,
+    'last_run_started': None,
+    'last_run_finished': None,
+    'last_error': None,
+    'last_trigger': None,
 }
 
-
-def load_metrics():
-    if not os.path.exists(DATA_FILE):
-        return None
-
-    try:
-        with open(DATA_FILE, 'r') as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+load_dotenv(os.path.join(os.path.dirname(BASE_DIR), '.env'))
 
 
-def run_monitor_cycle():
-    with monitor_lock:
-        monitor_state["last_run_started"] = time.time()
-        monitor_state["last_error"] = None
+class MonitorAlreadyRunning(Exception):
+    """Raised when a new metrics run is requested while one is already active."""
+
+
+def _load_local_env_value(key: str) -> str | None:
+    env_files = [
+        os.path.join(BASE_DIR, '.env'),
+        os.path.join(os.path.dirname(BASE_DIR), '.env'),
+    ]
+
+    for env_file in env_files:
+        if not os.path.exists(env_file):
+            continue
 
         try:
-            run_monitor(DATA_FILE)
-        except Exception as exc:
-            monitor_state["last_error"] = str(exc)
-            raise
-        finally:
-            monitor_state["last_run_finished"] = time.time()
+            with open(env_file, 'r', encoding='utf-8') as handle:
+                for raw_line in handle:
+                    line = raw_line.strip()
+                    if not line or line.startswith('#') or '=' not in line:
+                        continue
+
+                    name, value = line.split('=', 1)
+                    if name.strip() == key:
+                        return value.strip().strip('"\'')
+        except OSError:
+            continue
+
+    return None
 
 
-def background_monitor():
+def _get_setting(key: str, default: str | None = None) -> str | None:
+    return os.getenv(key) or _load_local_env_value(key) or default
+
+
+def _to_float(value: Any, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _read_json(path: str, default: Any):
+    if not os.path.exists(path):
+        return default
+
+    try:
+        with open(path, 'r', encoding='utf-8') as handle:
+            return json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        return default
+
+
+def _write_json(path: str, payload: Any) -> None:
+    with open(path, 'w', encoding='utf-8') as handle:
+        json.dump(payload, handle, indent=2)
+
+
+def load_metrics() -> dict[str, Any] | None:
+    data = _read_json(DATA_FILE, None)
+    return data if isinstance(data, dict) else None
+
+
+def load_history() -> list[dict[str, Any]]:
+    history = _read_json(HISTORY_FILE, [])
+    return history if isinstance(history, list) else []
+
+
+def _serialize_suggestions(suggestions: list[str]) -> str:
+    return json.dumps(suggestions or [], ensure_ascii=True)
+
+
+def calculate_health_score(metrics: dict[str, Any]) -> dict[str, Any]:
+    download = _to_float(metrics.get('download'))
+    upload = _to_float(metrics.get('upload'))
+    ping = _to_float(metrics.get('ping'))
+
+    score = 100
+    score -= min(max(ping - 20, 0) * 0.65, 34)
+    score -= min(max(80 - download, 0) * 0.42, 34)
+    score -= min(max(25 - upload, 0) * 0.9, 24)
+    score = int(max(0, min(100, round(score))))
+
+    if score >= 85:
+        label = 'Excellent'
+        accent = 'mint'
+    elif score >= 65:
+        label = 'Good'
+        accent = 'blue'
+    elif score >= 45:
+        label = 'Fair'
+        accent = 'gold'
+    else:
+        label = 'Poor'
+        accent = 'rose'
+
+    return {
+        'score': score,
+        'label': label,
+        'accent': accent,
+    }
+
+
+def detect_network_flags(metrics: dict[str, Any], recommendation: dict[str, Any]) -> dict[str, Any]:
+    ping = _to_float(metrics.get('ping'))
+    download = _to_float(metrics.get('download'))
+    upload = _to_float(metrics.get('upload'))
+
+    issue_detected = ping >= 70 or download < 30 or upload < 10
+    alert_level = 'clear'
+    if ping >= 100 or download < 15 or upload < 5:
+        alert_level = 'critical'
+    elif issue_detected:
+        alert_level = 'warning'
+
+    headline = 'Network looks stable.'
+    if alert_level == 'critical':
+        headline = 'Your WiFi needs attention before demanding tasks.'
+    elif alert_level == 'warning':
+        headline = 'A few metrics suggest your WiFi can be improved.'
+
+    return {
+        'issue_detected': issue_detected,
+        'alert_level': alert_level,
+        'headline': headline,
+        'status': recommendation.get('status', 'unknown'),
+    }
+
+
+def build_metrics_payload(metrics: dict[str, Any] | None) -> dict[str, Any] | None:
+    if metrics is None:
+        return None
+
+    recommendation = generate_ai_recommendation(metrics)
+    health = calculate_health_score(metrics)
+    flags = detect_network_flags(metrics, recommendation)
+
+    return {
+        **metrics,
+        'ai_recommendation': recommendation,
+        'health_score': health,
+        'alerts': flags,
+        'running': monitor_lock.locked(),
+        'last_error': monitor_state['last_error'],
+    }
+
+
+def save_snapshot(snapshot: dict[str, Any]) -> None:
+    _write_json(DATA_FILE, snapshot)
+
+    history = load_history()
+    history.insert(0, snapshot)
+    history = history[:MAX_HISTORY_ITEMS]
+    _write_json(HISTORY_FILE, history)
+
+
+def build_chat_prompt(user_message: str, metrics_payload: dict[str, Any]) -> str:
+    recommendation = metrics_payload.get('ai_recommendation', {})
+    health = metrics_payload.get('health_score', {})
+    alerts = metrics_payload.get('alerts', {})
+
+    return (
+        'You are a network assistant.\n\n'
+        f'User question: {user_message.strip()}\n\n'
+        'Network stats:\n'
+        f"- Download: {_to_float(metrics_payload.get('download')):.2f} Mbps\n"
+        f"- Upload: {_to_float(metrics_payload.get('upload')):.2f} Mbps\n"
+        f"- Ping: {_to_float(metrics_payload.get('ping')):.2f} ms\n"
+        f"- Health score: {health.get('score', 0)}/100 ({health.get('label', 'Unknown')})\n\n"
+        'AI analysis:\n'
+        f"- Status: {recommendation.get('status', 'unknown')}\n"
+        f"- Suggestions: {_serialize_suggestions(recommendation.get('recommendations', []))}\n"
+        f"- Alert level: {alerts.get('alert_level', 'clear')}\n\n"
+        'Answer the user question clearly based on the network condition.\n'
+        'Focus on whether the user can do what they asked, given the current WiFi quality.\n\n'
+        'Rules:\n'
+        '- Answer in maximum 4 lines\n'
+        '- Be direct and helpful\n'
+        '- Do not repeat all metrics unnecessarily\n'
+        '- Give yes/no when applicable (like streaming, gaming)\n'
+        '- Provide short explanation'
+    )
+
+
+def _gemini_error_message(exc: Exception) -> str:
+    parts = [exc.__class__.__name__]
+    message = str(exc).strip()
+    if message:
+        parts.append(message)
+
+    status_code = getattr(exc, 'status_code', None)
+    if status_code:
+        parts.append(f'status={status_code}')
+
+    response = getattr(exc, 'response', None)
+    if response:
+        parts.append(str(response))
+
+    return ' | '.join(parts)
+
+
+def _candidate_models() -> list[str]:
+    primary_model = _get_setting('GEMINI_MODEL', GEMINI_DEFAULT_MODEL)
+    fallback_model = _get_setting('GEMINI_FALLBACK_MODEL', GEMINI_FALLBACK_DEFAULT_MODEL)
+
+    models = [primary_model]
+    if fallback_model and fallback_model not in models:
+        models.append(fallback_model)
+
+    return models
+
+
+def generate_chat_reply(user_message: str, metrics_payload: dict[str, Any]) -> str:
+    if genai is None:
+        raise RuntimeError("Gemini SDK is not installed. Install the 'google-genai' package first.")
+
+    api_key = _get_setting('GEMINI_API_KEY')
+    if not api_key:
+        raise RuntimeError('Missing GEMINI_API_KEY in environment or backend/.env.')
+
+    prompt = build_chat_prompt(user_message, metrics_payload)
+    client = genai.Client(api_key=api_key)
+    last_error = None
+
+    for model in _candidate_models():
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(model=model, contents=prompt)
+                reply = (getattr(response, 'text', '') or '').strip()
+                if not reply:
+                    raise RuntimeError(f"Gemini returned an empty response for model '{model}'.")
+                return reply
+            except Exception as exc:  # pragma: no cover - network/provider path
+                last_error = _gemini_error_message(exc)
+                retryable = '503' in last_error or 'UNAVAILABLE' in last_error.upper()
+                if retryable and attempt == 0:
+                    time.sleep(1.5)
+                    continue
+                break
+
+    raise RuntimeError(last_error or 'Gemini request failed for all configured models.')
+
+
+def run_monitor_cycle(trigger_source: str = 'scheduled') -> dict[str, Any]:
+    if not monitor_lock.acquire(blocking=False):
+        raise MonitorAlreadyRunning()
+
+    monitor_state['last_run_started'] = time.time()
+    monitor_state['last_error'] = None
+    monitor_state['last_trigger'] = trigger_source
+
+    try:
+        snapshot = run_monitor()
+        save_snapshot(snapshot)
+        return snapshot
+    except Exception as exc:
+        monitor_state['last_error'] = str(exc)
+        raise
+    finally:
+        monitor_state['last_run_finished'] = time.time()
+        monitor_lock.release()
+
+
+def queue_background_refresh(trigger_source: str) -> bool:
+    monitor_state['last_trigger'] = trigger_source
+    refresh_event.set()
+    return not monitor_lock.locked()
+
+
+def background_monitor() -> None:
     refresh_event.set()
 
     while True:
-        refresh_event.wait(timeout=45)
+        triggered = refresh_event.wait(timeout=BACKGROUND_INTERVAL_SECONDS)
         refresh_event.clear()
+        trigger_source = monitor_state.get('last_trigger') or ('event' if triggered else 'scheduled')
 
         try:
-            run_monitor_cycle()
+            run_monitor_cycle(trigger_source=trigger_source)
+        except MonitorAlreadyRunning:
+            continue
         except Exception as exc:
-            print("Error in background speed test:", exc)
+            print('Error in background speed test:', exc)
+
+
+def metrics_status_payload() -> dict[str, Any]:
+    latest = load_metrics()
+    return {
+        'running': monitor_lock.locked(),
+        'ready': latest is not None,
+        'last_updated': latest.get('timestamp') if latest else None,
+        'last_error': monitor_state['last_error'],
+        'last_trigger': monitor_state['last_trigger'],
+    }
+
+
+def build_fix_plan(metrics_payload: dict[str, Any]) -> dict[str, Any]:
+    alerts = metrics_payload.get('alerts', {})
+    recommendation = metrics_payload.get('ai_recommendation', {})
+    issue_detected = alerts.get('issue_detected', False)
+
+    actions = [
+        'Applied DNS optimization profile suggestion.',
+        'Prepared a safe network reset checklist for the user.',
+    ]
+
+    if issue_detected:
+        message = 'Suggested a DNS refresh and router restart workflow to stabilize WiFi performance.'
+    else:
+        message = 'No severe issue detected, so the assistant suggested light optimization only.'
+
+    return {
+        'issue_detected': issue_detected,
+        'action_taken': 'Simulated network optimization guidance',
+        'improvement_message': message,
+        'next_steps': recommendation.get('recommendations', [])[:3],
+        'actions': actions,
+    }
 
 
 @app.route('/')
@@ -73,74 +374,115 @@ def index():
 
 @app.route('/metrics', methods=['GET'])
 def get_metrics():
-    # Serve the latest saved metrics while the background worker keeps the cache fresh.
-    data = load_metrics()
-
-    if data is None:
-        return jsonify({"error": "No data yet, please wait..."}), 404
-
-    payload = {
-        **data,
-        "ai_recommendation": generate_ai_recommendation(data),
-        "running": monitor_lock.locked(),
-        "last_error": monitor_state["last_error"],
-    }
+    payload = build_metrics_payload(load_metrics())
+    if payload is None:
+        return jsonify({'error': 'No data yet, please wait...'}), 404
     return jsonify(payload)
+
+
+@app.route('/metrics/latest', methods=['GET'])
+def get_latest_metrics():
+    payload = build_metrics_payload(load_metrics())
+    if payload is None:
+        return jsonify({'error': 'No cached metrics are available yet.'}), 404
+    return jsonify(payload)
+
+
+@app.route('/metrics/status', methods=['GET'])
+def get_metrics_status():
+    return jsonify(metrics_status_payload())
+
+
+@app.route('/metrics/history', methods=['GET'])
+def get_metrics_history():
+    history = [build_metrics_payload(item) for item in load_history()]
+    return jsonify({'items': [item for item in history if item is not None]})
+
+
+@app.route('/metrics/prefetch', methods=['POST'])
+def prefetch_metrics():
+    queued = queue_background_refresh('prefetch')
+    payload = build_metrics_payload(load_metrics())
+    status_payload = metrics_status_payload()
+    status_payload['queued'] = queued
+    status_payload['latest'] = payload
+    return jsonify(status_payload), 202
 
 
 @app.route('/trigger-performance', methods=['POST'])
 def trigger_performance():
-    data = load_metrics()
-    refresh_event.set()
+    queued = queue_background_refresh('manual_button')
+    payload = build_metrics_payload(load_metrics())
 
-    if data is None:
+    if payload is None:
         return jsonify({
-            "status": "warming_up",
-            "message": "Preparing your first network snapshot.",
-            "running": monitor_lock.locked(),
-            "recommendation": {
-                "status": "warming_up",
-                "issue_summary": "The AI engine is waiting for the first saved metrics snapshot.",
-                "issues": [],
-                "recommendations": ["Keep the dashboard open and the latest saved result will appear after the first test completes."],
-            },
+            'status': 'warming_up',
+            'queued': queued,
+            'running': monitor_lock.locked(),
+            'message': 'Preparing your first network snapshot.',
         }), 202
 
     return jsonify({
-        "status": "queued",
-        "message": "Showing the latest saved result while a fresh test runs in the background.",
-        "running": monitor_lock.locked(),
-        "data": {
-            **data,
-            "ai_recommendation": generate_ai_recommendation(data),
-        },
+        'status': 'queued',
+        'queued': queued,
+        'running': monitor_lock.locked(),
+        'message': 'Using the latest cached snapshot while a fresh test runs in the background.',
+        'data': payload,
     })
+
+
+@app.route('/fix-network', methods=['POST'])
+def fix_network():
+    payload = build_metrics_payload(load_metrics())
+    if payload is None:
+        return jsonify({'error': 'No cached metrics are available yet.'}), 404
+    return jsonify(build_fix_plan(payload))
 
 
 @app.route('/chat', methods=['POST'])
 def chat():
     payload = request.get_json(silent=True) or {}
-    message = str(payload.get("message", "")).strip()
-    metrics = load_metrics()
+    message = (payload.get('message') or '').strip()
 
     if not message:
-        return jsonify({"reply": "Please enter a network question so I can help."}), 400
+        return jsonify({'error': 'Message is required.'}), 400
 
-    if metrics is None:
-        return jsonify({"reply": "I do not have a saved network snapshot yet. Run Test Performance first and I will analyze it."}), 200
+    metrics_payload = build_metrics_payload(load_metrics())
+    if metrics_payload is None:
+        return jsonify({'error': 'No saved network snapshot is available yet.'}), 404
 
-    reply = chatbot_response(message, metrics)
-    return jsonify({"reply": reply})
+    try:
+        reply = generate_chat_reply(message, metrics_payload)
+    except RuntimeError as exc:
+        return jsonify({
+            'error': 'Gemini AI request failed.',
+            'details': str(exc),
+        }), 502
+
+    return jsonify({
+        'message': message,
+        'reply': reply,
+        'metrics_timestamp': metrics_payload.get('timestamp', 'the latest saved snapshot'),
+        'recommendation': metrics_payload.get('ai_recommendation'),
+        'health_score': metrics_payload.get('health_score'),
+        'alerts': metrics_payload.get('alerts'),
+    })
 
 
-def start_background_thread():
-    thread = threading.Thread(target=background_monitor, daemon=True)
-    thread.start()
+def ensure_background_thread() -> None:
+    global background_thread
+
+    with background_thread_lock:
+        if background_thread and background_thread.is_alive():
+            return
+
+        background_thread = threading.Thread(target=background_monitor, daemon=True, name='netsense-monitor')
+        background_thread.start()
+
+
+ensure_background_thread()
 
 
 if __name__ == '__main__':
-    print("🚀 Backend running...")
-    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        start_background_thread()
-
+    print('NetSense AI backend running...')
     app.run(debug=True, port=5000)
