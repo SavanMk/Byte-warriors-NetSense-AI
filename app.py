@@ -17,7 +17,7 @@ from network_monitor import run_monitor
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
-)
+
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 HISTORY_FILE = os.path.join(BASE_DIR, 'history.json')
 MAX_HISTORY_ITEMS = 10
