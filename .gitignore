@@ -9,3 +9,5 @@ env/
 tmp_video_frames/
 backend/data.json
 backend/history.json
+data.json
+history.json
