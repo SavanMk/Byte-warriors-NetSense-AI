@@ -15,13 +15,12 @@ except ImportError:
 from ai_engine import generate_ai_recommendation
 from network_monitor import run_monitor
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(
     __name__,
-    template_folder='../frontend/templates',
-    static_folder='../frontend/static'
+    template_folder=os.path.join(BASE_DIR, 'frontend', 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'frontend', 'static'),
 )
-
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 HISTORY_FILE = os.path.join(BASE_DIR, 'history.json')
 MAX_HISTORY_ITEMS = 10
@@ -46,21 +45,17 @@ monitor_state = {
 }
 
 load_dotenv(os.path.join(BASE_DIR, '.env'))
-load_dotenv(os.path.join(os.path.dirname(BASE_DIR), '.env'))
+load_dotenv(os.path.join(BASE_DIR, 'backend', '.env'))
 
 
 class MonitorAlreadyRunning(Exception):
     """Raised when a new metrics run is requested while one is already active."""
 
 
-def _log_netsense(message: str) -> None:
-    print(f'[NetSense] {message}', flush=True)
-
-
 def _load_local_env_value(key: str) -> str | None:
     env_files = [
         os.path.join(BASE_DIR, '.env'),
-        os.path.join(os.path.dirname(BASE_DIR), '.env'),
+        os.path.join(BASE_DIR, 'backend', '.env'),
     ]
 
     for env_file in env_files:
@@ -106,10 +101,8 @@ def _read_json(path: str, default: Any):
 
 
 def _write_json(path: str, payload: Any) -> None:
-    temp_path = f'{path}.tmp'
-    with open(temp_path, 'w', encoding='utf-8') as handle:
+    with open(path, 'w', encoding='utf-8') as handle:
         json.dump(payload, handle, indent=2)
-    os.replace(temp_path, path)
 
 
 def no_store_json(payload: Any, status: int = 200):
@@ -140,47 +133,11 @@ def calculate_health_score(metrics: dict[str, Any]) -> dict[str, Any]:
     upload = _to_float(metrics.get('upload'))
     ping = _to_float(metrics.get('ping'))
 
-    throughput_component = min(download / 250.0, 1.0) * 40.0
-    upload_component = min(upload / 100.0, 1.0) * 25.0
-
-    if ping <= 5:
-        latency_component = 35.0
-    elif ping <= 15:
-        latency_component = 35.0 - ((ping - 5.0) / 10.0) * 8.0
-    elif ping <= 30:
-        latency_component = 27.0 - ((ping - 15.0) / 15.0) * 9.0
-    elif ping <= 60:
-        latency_component = 18.0 - ((ping - 30.0) / 30.0) * 10.0
-    elif ping <= 120:
-        latency_component = 8.0 - ((ping - 60.0) / 60.0) * 6.0
-    else:
-        latency_component = max(0.0, 2.0 - ((ping - 120.0) / 80.0) * 2.0)
-
-    penalties: list[dict[str, Any]] = []
-    penalty_total = 0.0
-
-    if download < 25:
-        penalties.append({'metric': 'download', 'reason': 'download_below_25', 'value': 14})
-        penalty_total += 14.0
-    elif download < 50:
-        penalties.append({'metric': 'download', 'reason': 'download_below_50', 'value': 7})
-        penalty_total += 7.0
-
-    if upload < 10:
-        penalties.append({'metric': 'upload', 'reason': 'upload_below_10', 'value': 12})
-        penalty_total += 12.0
-    elif upload < 20:
-        penalties.append({'metric': 'upload', 'reason': 'upload_below_20', 'value': 6})
-        penalty_total += 6.0
-
-    if ping > 100:
-        penalties.append({'metric': 'ping', 'reason': 'ping_above_100', 'value': 14})
-        penalty_total += 14.0
-    elif ping > 60:
-        penalties.append({'metric': 'ping', 'reason': 'ping_above_60', 'value': 7})
-        penalty_total += 7.0
-
-    score = int(max(0, min(100, round(throughput_component + upload_component + latency_component - penalty_total))))
+    score = 100
+    score -= min(max(ping - 20, 0) * 0.65, 34)
+    score -= min(max(80 - download, 0) * 0.42, 34)
+    score -= min(max(25 - upload, 0) * 0.9, 24)
+    score = int(max(0, min(100, round(score))))
 
     if score >= 85:
         label = 'Excellent'
@@ -199,13 +156,6 @@ def calculate_health_score(metrics: dict[str, Any]) -> dict[str, Any]:
         'score': score,
         'label': label,
         'accent': accent,
-        'components': {
-            'download': round(throughput_component, 2),
-            'upload': round(upload_component, 2),
-            'ping': round(latency_component, 2),
-            'penalty_total': round(penalty_total, 2),
-        },
-        'penalties': penalties,
     }
 
 
@@ -242,8 +192,6 @@ def build_metrics_payload(metrics: dict[str, Any] | None) -> dict[str, Any] | No
     recommendation = generate_ai_recommendation(metrics)
     health = calculate_health_score(metrics)
     flags = detect_network_flags(metrics, recommendation)
-    snapshot_age_seconds = _snapshot_age_seconds(metrics)
-    source = _snapshot_source(metrics, fallback='cached')
 
     return {
         **metrics,
@@ -252,12 +200,8 @@ def build_metrics_payload(metrics: dict[str, Any] | None) -> dict[str, Any] | No
         'alerts': flags,
         'running': monitor_lock.locked(),
         'status': monitor_state['status'],
-        'source': source,
+        'source': monitor_state.get('last_completed_source') or 'cached',
         'last_error': monitor_state['last_error'],
-        'snapshot_age_seconds': round(snapshot_age_seconds, 2) if snapshot_age_seconds is not None else None,
-        'stale': source == 'cached',
-        'last_update_timestamp': metrics.get('timestamp'),
-        'last_update_epoch': metrics.get('captured_at_epoch'),
     }
 
 
@@ -291,31 +235,12 @@ def _snapshot_source(metrics: dict[str, Any] | None, fallback: str = 'cached') -
 
 
 def save_snapshot(snapshot: dict[str, Any]) -> None:
-    _log_netsense(
-        f"Saving fresh metrics... run_id={snapshot.get('test_run_id')} timestamp={snapshot.get('timestamp')}"
-    )
     _write_json(DATA_FILE, snapshot)
 
     history = load_history()
     history.insert(0, snapshot)
     history = history[:MAX_HISTORY_ITEMS]
     _write_json(HISTORY_FILE, history)
-    _log_netsense(f"Timestamp of last update: {snapshot.get('timestamp')}")
-
-
-def _log_served_snapshot(route_name: str, metrics: dict[str, Any] | None) -> None:
-    if metrics is None:
-        _log_netsense(f'{route_name}: no metrics snapshot is available yet.')
-        return
-
-    age_seconds = _snapshot_age_seconds(metrics)
-    source = _snapshot_source(metrics, fallback='cached')
-    age_label = 'unknown' if age_seconds is None else f'{age_seconds:.2f}s'
-    message = 'Serving cached data (if any)' if source != 'fresh' else 'Serving fresh data'
-    _log_netsense(
-        f'{route_name}: {message}. run_id={metrics.get("test_run_id")} '
-        f'timestamp={metrics.get("timestamp")} age={age_label} source={source}'
-    )
 
 
 def build_chat_prompt(user_message: str, metrics_payload: dict[str, Any]) -> str:
@@ -380,7 +305,7 @@ def generate_chat_reply(user_message: str, metrics_payload: dict[str, Any]) -> s
 
     api_key = _get_setting('GEMINI_API_KEY')
     if not api_key:
-        raise RuntimeError('Missing GEMINI_API_KEY in environment or backend/.env.')
+        raise RuntimeError('Missing GEMINI_API_KEY in environment or .env.')
 
     prompt = build_chat_prompt(user_message, metrics_payload)
     client = genai.Client(api_key=api_key)
@@ -409,35 +334,26 @@ def run_monitor_cycle(trigger_source: str = 'scheduled') -> dict[str, Any]:
     if not monitor_lock.acquire(blocking=False):
         raise MonitorAlreadyRunning()
 
-    _log_netsense(f'Starting speed test ({trigger_source})')
+    print(f'[NetSense] Starting speed test ({trigger_source})')
     monitor_state['status'] = 'running'
     monitor_state['last_run_started'] = time.time()
     monitor_state['last_error'] = None
     monitor_state['last_trigger'] = trigger_source
-    monitor_state['last_refresh_requested_at'] = time.time()
 
     try:
         snapshot = run_monitor()
         save_snapshot(snapshot)
-        persisted_snapshot = load_metrics()
         monitor_state['status'] = 'ready'
         monitor_state['last_completed_timestamp'] = snapshot.get('timestamp')
         monitor_state['last_completed_source'] = 'fresh'
         monitor_state['cached_available'] = True
         monitor_state['completed_runs'] += 1
-        if persisted_snapshot and persisted_snapshot.get('test_run_id') == snapshot.get('test_run_id'):
-            _log_netsense(
-                f'data.json refresh confirmed for run_id={snapshot.get("test_run_id")} '
-                f'timestamp={persisted_snapshot.get("timestamp")}'
-            )
-        else:
-            _log_netsense('Warning: data.json verification could not confirm the latest run.')
-        _log_netsense(f'Speed test completed: {snapshot}')
+        print(f'[NetSense] Speed test completed: {snapshot}')
         return snapshot
     except Exception as exc:
         monitor_state['status'] = 'failed'
         monitor_state['last_error'] = str(exc)
-        _log_netsense(f'Speed test failed: {exc}')
+        print(f'[NetSense] Speed test failed: {exc}')
         raise
     finally:
         monitor_state['last_run_finished'] = time.time()
@@ -532,9 +448,7 @@ def healthz():
 
 @app.route('/metrics', methods=['GET'])
 def get_metrics():
-    latest = load_metrics()
-    _log_served_snapshot('/metrics', latest)
-    payload = build_metrics_payload(latest)
+    payload = build_metrics_payload(load_metrics())
     if payload is None:
         return no_store_json({'error': 'No data yet, please wait...'}, 404)
     return no_store_json(payload)
@@ -543,7 +457,6 @@ def get_metrics():
 @app.route('/metrics/latest', methods=['GET'])
 def get_latest_metrics():
     latest = load_metrics()
-    _log_served_snapshot('/metrics/latest', latest)
     payload = build_metrics_payload(latest)
     if payload is None:
         return no_store_json({'error': 'No cached metrics are available yet.'}, 404)
@@ -554,8 +467,6 @@ def get_latest_metrics():
 
 @app.route('/metrics/status', methods=['GET'])
 def get_metrics_status():
-    latest = load_metrics()
-    _log_served_snapshot('/metrics/status', latest)
     return no_store_json(metrics_status_payload())
 
 
@@ -576,7 +487,6 @@ def prefetch_metrics():
 @app.route('/trigger-performance', methods=['POST'])
 def trigger_performance():
     monitor_state['last_manual_request_at'] = time.time()
-    monitor_state['last_refresh_requested_at'] = time.time()
     monitor_state['last_trigger'] = 'manual_button'
 
     if monitor_lock.locked():
