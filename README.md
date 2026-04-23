@@ -152,6 +152,8 @@ http://127.0.0.1:5000
 
 # 🎬 Demo / Screenshots
 ---
+<img src="Screenshot 2026-04-23 222302.png" width="220" alt="NetSense AI Logo">
+<img src="Screenshot 2026-04-23 222324.png" width="220" alt="NetSense AI Logo">
 
 
 
