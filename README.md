@@ -153,19 +153,22 @@ http://127.0.0.1:5000
 # 🎬 Demo / Screenshots
 ---
 
+
+
+
 # 👨‍💻 Team Members
 
 <p align="center">
 
 **Abhishek**
 Full Stack Developer
-🔗 https://github.com/YOUR_USERNAME
+🔗 https://github.com/abhishek271-eng
 
 <br>
 
 **Teammate Name**
 UI / Backend Developer
-🔗 https://github.com/YOUR_TEAMMATE
+🔗 https://github.com/SavanMK
 
 </p>
 
@@ -174,7 +177,7 @@ UI / Backend Developer
 # 🌐 Deployed Link
 
 ---
- ## 🔗 <b>https://netsense-ai.onrender.com</b>
+ ## 🔗 <b>https://netsense-ai-x8ja.onrender.com/</b>
 
 
 ---
