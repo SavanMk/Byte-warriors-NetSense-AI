@@ -12,20 +12,15 @@ try:
 except ImportError:
     genai = None
 
-try:
-    from .ai_engine import generate_ai_recommendation
-    from .network_monitor import run_monitor
-except ImportError:
-    from ai_engine import generate_ai_recommendation
-    from network_monitor import run_monitor
-
-app = Flask(
-    __name__,
-    template_folder='../frontend/templates',
-    static_folder='../frontend/static'
-)
+from ai_engine import generate_ai_recommendation
+from network_monitor import run_monitor
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'frontend', 'templates'),
+    static_folder=os.path.join(BASE_DIR, 'frontend', 'static'),
+)
 DATA_FILE = os.path.join(BASE_DIR, 'data.json')
 HISTORY_FILE = os.path.join(BASE_DIR, 'history.json')
 MAX_HISTORY_ITEMS = 10
@@ -50,7 +45,7 @@ monitor_state = {
 }
 
 load_dotenv(os.path.join(BASE_DIR, '.env'))
-load_dotenv(os.path.join(os.path.dirname(BASE_DIR), '.env'))
+load_dotenv(os.path.join(BASE_DIR, 'backend', '.env'))
 
 
 class MonitorAlreadyRunning(Exception):
@@ -60,7 +55,7 @@ class MonitorAlreadyRunning(Exception):
 def _load_local_env_value(key: str) -> str | None:
     env_files = [
         os.path.join(BASE_DIR, '.env'),
-        os.path.join(os.path.dirname(BASE_DIR), '.env'),
+        os.path.join(BASE_DIR, 'backend', '.env'),
     ]
 
     for env_file in env_files:
@@ -310,7 +305,7 @@ def generate_chat_reply(user_message: str, metrics_payload: dict[str, Any]) -> s
 
     api_key = _get_setting('GEMINI_API_KEY')
     if not api_key:
-        raise RuntimeError('Missing GEMINI_API_KEY in environment or backend/.env.')
+        raise RuntimeError('Missing GEMINI_API_KEY in environment or .env.')
 
     prompt = build_chat_prompt(user_message, metrics_payload)
     client = genai.Client(api_key=api_key)
