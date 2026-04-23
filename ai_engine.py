@@ -1,4 +1,4 @@
-"""Rule-based AI helpers for Day 4 recommendations and chatbot replies."""
+"""Rule-based AI helpers for NetSense AI recommendations and chatbot replies."""
 
 from __future__ import annotations
 
@@ -10,73 +10,108 @@ def _to_float(value, default=0.0):
         return default
 
 
-def generate_ai_recommendation(metrics):
-    """Analyze current metrics and return a simple recommendation payload."""
+def _health_score(metrics):
     download = _to_float(metrics.get("download"))
     upload = _to_float(metrics.get("upload"))
     ping = _to_float(metrics.get("ping"))
 
+    throughput_score = min(download / 250.0, 1.0) * 40.0
+    upload_score = min(upload / 100.0, 1.0) * 25.0
+
+    if ping <= 5:
+        latency_score = 35.0
+    elif ping <= 15:
+        latency_score = 35.0 - ((ping - 5.0) / 10.0) * 8.0
+    elif ping <= 30:
+        latency_score = 27.0 - ((ping - 15.0) / 15.0) * 9.0
+    elif ping <= 60:
+        latency_score = 18.0 - ((ping - 30.0) / 30.0) * 10.0
+    elif ping <= 120:
+        latency_score = 8.0 - ((ping - 60.0) / 60.0) * 6.0
+    else:
+        latency_score = max(0.0, 2.0 - ((ping - 120.0) / 80.0) * 2.0)
+
+    penalty = 0.0
+    if download < 25:
+        penalty += 14.0
+    elif download < 50:
+        penalty += 7.0
+
+    if upload < 10:
+        penalty += 12.0
+    elif upload < 20:
+        penalty += 6.0
+
+    if ping > 100:
+        penalty += 14.0
+    elif ping > 60:
+        penalty += 7.0
+
+    return int(max(0, min(100, round(throughput_score + upload_score + latency_score - penalty))))
+
+
+def generate_ai_recommendation(metrics):
+    """Analyze current metrics and return a recommendation payload."""
+    download = _to_float(metrics.get("download"))
+    upload = _to_float(metrics.get("upload"))
+    ping = _to_float(metrics.get("ping"))
+    score = _health_score(metrics)
+
     issues = []
     recommendations = []
-    severity_score = 0
 
-    if ping >= 80:
-        issues.append("Ping is high, which can cause lag and unstable browsing or calls.")
+    if ping >= 100:
+        issues.append("Ping is very high, so gaming, calls, and browsing may feel delayed.")
         recommendations.extend(
             [
-                "Reduce background downloads or streaming on the network.",
-                "Move closer to the router or remove signal obstacles.",
-                "Restart the router if latency has stayed high for several tests.",
+                "Reduce background traffic on the network before testing again.",
+                "Move closer to the router or switch to Ethernet for latency-sensitive work.",
+                "Restart the router if high latency continues across several tests.",
             ]
         )
-        severity_score += 2
-    elif ping >= 40:
-        issues.append("Ping is slightly elevated, so responsiveness may dip during busy periods.")
-        recommendations.append("Limit heavy background activity when low-latency use matters.")
-        severity_score += 1
+    elif ping >= 60:
+        issues.append("Ping is elevated, so responsiveness may dip during busy periods.")
+        recommendations.append("Limit competing traffic when low latency matters.")
 
     if download < 25:
-        issues.append("Download speed is below the healthy range for a modern home network.")
+        issues.append("Download speed is weak for streaming, larger downloads, or multi-device use.")
         recommendations.extend(
             [
-                "Reposition the router for a clearer signal path.",
                 "Check whether other devices are saturating the connection.",
-                "Contact the ISP if slow download speeds persist across multiple tests.",
+                "Test from a stronger WiFi position or closer to the router.",
+                "Contact the ISP if low download speed persists across multiple fresh tests.",
             ]
         )
-        severity_score += 2
-    elif download < 60:
+    elif download < 75:
         issues.append("Download speed is usable, but it has room for improvement.")
-        recommendations.append("Try testing closer to the router to compare WiFi quality.")
-        severity_score += 1
+        recommendations.append("Compare WiFi performance from another room or band to find signal loss.")
 
     if upload < 10:
         issues.append("Upload speed is low and may affect video calls, backups, or cloud sync.")
         recommendations.extend(
             [
-                "Pause simultaneous uploads such as backups or file sync tasks.",
-                "Prefer the 5 GHz band if you are close to the router.",
+                "Pause large uploads or sync jobs on other devices.",
+                "Prefer a stronger WiFi location or 5 GHz band if you are nearby.",
             ]
         )
-        severity_score += 2
     elif upload < 20:
-        issues.append("Upload speed is moderate but may slow down during shared usage.")
+        issues.append("Upload speed is moderate and may dip during shared usage.")
         recommendations.append("Reduce simultaneous uploads if meetings or gaming feel unstable.")
-        severity_score += 1
 
-    if not issues:
+    if score >= 90:
         status = "healthy"
-        summary = "Your network looks healthy right now with stable overall performance."
-        recommendations = [
-            "Keep the router in an open location to maintain signal quality.",
-            "Continue periodic tests to catch changes early.",
-        ]
-    elif severity_score >= 4:
+        summary = "Your network looks strong right now with high throughput and low latency."
+        if not recommendations:
+            recommendations = [
+                "Keep the router in an open location to maintain signal quality.",
+                "Run another fresh test when the network is busy to compare results.",
+            ]
+    elif score >= 70:
+        status = "watch"
+        summary = "Your network is usable, but one or more metrics could be improved."
+    else:
         status = "attention"
         summary = "Your network may need attention because multiple metrics are below target."
-    else:
-        status = "watch"
-        summary = "Your network is usable, but a few signals suggest optimization is worth trying."
 
     unique_recommendations = []
     for item in recommendations:
@@ -88,6 +123,7 @@ def generate_ai_recommendation(metrics):
         "issue_summary": summary,
         "issues": issues,
         "recommendations": unique_recommendations,
+        "health_score": score,
     }
 
 
