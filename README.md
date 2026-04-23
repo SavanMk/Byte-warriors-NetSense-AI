@@ -1,7 +1,7 @@
 
 </h1>
 <p align="center">
-  <img src="LoGo.png" width="220" alt="NetSense AI Logo">
+  <img src="logo.png" width="220" alt="NetSense AI Logo">
 </p>
 
 ## 🚀 NetSense AI
